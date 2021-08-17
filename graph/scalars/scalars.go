@@ -1,11 +1,11 @@
-package models
+package scalars
 
 import (
 	"fmt"
 	"io"
 	"strconv"
 
-	"github.com/arsmn/fastgql/graphql"
+	"github.com/99designs/gqlgen/graphql"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 

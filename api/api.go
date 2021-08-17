@@ -10,13 +10,14 @@ import (
 	"github.com/khanhvtn/netevent-go/graph"
 	"github.com/khanhvtn/netevent-go/graph/generated"
 	"github.com/khanhvtn/netevent-go/middlewares"
+	"github.com/khanhvtn/netevent-go/services"
 )
 
 // Defining the Graphql handler
-func graphqlHandler() gin.HandlerFunc {
+func graphqlHandler(di *services.DI) gin.HandlerFunc {
 	// NewExecutableSchema and Config are in the generated.go file
 	// Resolver is in the resolver.go file
-	h := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: graph.Init()}))
+	h := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: graph.Init(di)}))
 
 	return func(c *gin.Context) {
 		h.ServeHTTP(c.Writer, c.Request)
@@ -33,7 +34,7 @@ func playgroundHandler() gin.HandlerFunc {
 }
 
 /* Init: set the port, cors, route, api and serve the api */
-func Init() {
+func Init(di *services.DI) {
 	// Setting up Gin
 	app := gin.New()
 
@@ -47,7 +48,7 @@ func Init() {
 	app.Use(middlewares.ContextToContextMiddleware())
 
 	//GraphQL
-	app.POST("/query", graphqlHandler())
+	app.POST("/query", graphqlHandler(di))
 	app.GET("/", playgroundHandler())
 	app.Run(":5000")
 }

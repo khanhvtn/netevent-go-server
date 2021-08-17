@@ -1,29 +1,7 @@
-# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
-
-#Model
-type User {
-	id: ID!
-	email: String!
-	password: String!
-	roles: [String!]!
-	createdAt: Time!
-	updatedAt: Time!
+schema {
+    query: Query
+    mutation: Mutation
 }
-
-
-#Input
-  input NewUser {
-	email: String!
-	password: String!
-	confirmPassword: String!
-	roles: [String!]!
-  }
-  input Login {
-	email: String!
-	password: String!
-  }
 
 
 #Query
@@ -39,5 +17,3 @@ type User {
 	login(input: Login!): User!
   }
 
-#Scalar
-scalar Time

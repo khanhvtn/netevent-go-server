@@ -1,0 +1,66 @@
+#Input
+input NewUser {
+	email: String!
+	password: String!
+	confirmPassword: String!
+	roles: [String!]!
+  }
+  
+input Login {
+	email: String!
+	password: String!
+}
+
+input NewEvent {       
+	tags:                  [String!]!  
+	tasks:                 [NewTask!]!           
+	facilityHistories:     [NewFacilityHistory!]!  
+	name:                  String!             
+	language:              String!        
+	eventTypeId:             String!        
+	mode:                  String!           
+	location:              String!            
+	accommodation:         String!           
+	registrationCloseDate: Time!         
+	startDate:             Time!        
+	endDate:               Time!        
+	maxParticipants:       Int!                
+	description:           String!            
+	ownerId:                 String!             
+	budget:                Float!           
+	image:                 String!
+}
+input NewEventType  {
+	name: String!
+}
+
+input NewFacility  {
+	name: String!
+	code: String!
+	type: String!
+}
+input NewFacilityHistory  {
+	facilityId: String!
+	borrowDate: Time!
+	returnDate: Time!
+	eventId: String!
+}
+input NewParticipant  {
+	eventId: String!
+	email: String!
+	name: String!
+	academic: String!
+	school: String!
+	major: String!
+	phone: String!
+	dob: Time!
+	expectedGraduateDate: Time!
+}
+input NewTask  {
+	eventId: String!
+	name: String!
+	userId: String!
+	type: String!
+	startDate: Time!
+	endDate: Time!
+}

@@ -1,0 +1,110 @@
+#Model
+type User {
+	id: ID!
+	email: String!
+	password: String!
+	roles: [String!]!
+	createdAt: Time!
+	updatedAt: Time!
+}
+
+type Event {
+	id:                    ID! 
+	createdAt:             Time!         
+	updatedAt:             Time!        
+	tags:                  [String!]!          
+	isApproved:            Boolean!             
+	reviewer:              User              
+	isFinished:            Boolean!            
+	tasks:                 [Task!]!           
+	facilityHistories:     [FacilityHistory!]!  
+	name:                  String!             
+	language:              String!        
+	eventType:             EventType!        
+	mode:                  String!           
+	location:              String!            
+	accommodation:         String!           
+	registrationCloseDate: Time!         
+	startDate:             Time!        
+	endDate:               Time!        
+	maxParticipants:       Int!                
+	description:           String!            
+	owner:                 User             
+	budget:                Float!           
+	image:                 String!           
+	isDeleted:             Boolean!
+}
+
+
+type EventType  {
+	id: ID!
+	createdAt: Time!
+	updatedAt: Time!
+	name: String!
+	isDeleted: Boolean!
+}
+
+
+type Facility  {
+	id: ID!
+	createdAt: Time!
+	updatedAt: Time!
+	status: Boolean!
+	name: String!
+	code: String!
+	Type: String!
+	isDeleted: Boolean!
+}
+
+
+
+
+
+type FacilityHistory  {
+	id: ID!
+	createdAt: Time!         
+	updatedAt: Time! 
+	facility: Facility!
+	borrowDate: Time!
+	returnDate: Time!
+	event: Event!
+}
+
+
+
+
+type Participant  {
+	id: ID!
+	createdAt: Time!         
+	updatedAt: Time! 
+	isValid: Boolean!
+	isAttended: Boolean!
+	event: Event!
+	email: String!
+	name: String!
+	academic: String!
+	school: String!
+	major: String!
+	phone: String!
+	dob: Time!
+	expectedGraduateDate: Time!
+}
+
+
+
+
+type Task  {
+	id: ID!
+	createdAt: Time!
+	updatedAt: Time!
+	event: Event!
+	name: String!
+	user: User!
+	type: String!
+	startDate: Time!
+	endDate: Time!
+}
+
+
+#Scalar
+scalar Time

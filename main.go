@@ -5,6 +5,7 @@ import (
 
 	"github.com/khanhvtn/netevent-go/api"
 	"github.com/khanhvtn/netevent-go/database"
+	"github.com/khanhvtn/netevent-go/services"
 )
 
 func main() {
@@ -13,6 +14,13 @@ func main() {
 		log.Fatal("Not connected to DB")
 		return
 	}
+
+	//Create services
+	di, err := services.New()
+	if err != nil {
+		log.Fatal(err.Error())
+		return
+	}
 	//start API
-	api.Init()
+	api.Init(di)
 }
