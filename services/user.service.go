@@ -223,6 +223,30 @@ func (u *UserService) ValidateNewUser(newUser model.NewUser) error {
 		validation.Field(&newUser.Roles, validation.Required.Error("Role must not be blanked")),
 	)
 }
+
+func (u *UserService) ValidateUpdateUser(id string, updateUser model.UpdateUser) error {
+	return validation.ValidateStruct(&updateUser,
+		validation.Field(&updateUser.Email, validation.Required.Error("email must not be blanked"), is.Email.Error("invalid email"), validation.By(func(email interface{}) error {
+			//get current user
+			currentUser, err := u.GetOne(bson.M{"email": email.(string)})
+			if err != nil {
+				return err
+			}
+			//check email existed or not
+			user, err := u.GetOne(bson.M{"email": email.(string)})
+			if err != nil {
+				return err
+			}
+			if user != nil && user.Email != currentUser.Email {
+				return errors.New("email already existed")
+			}
+			return nil
+
+		})),
+		validation.Field(&updateUser.Password, validation.Required.Error("password must not be blanked")),
+		validation.Field(&updateUser.Roles, validation.Required.Error("Role must not be blanked")),
+	)
+}
 func (u *UserService) ValidateLogin(login model.Login) error {
 	return validation.ValidateStruct(&login,
 		validation.Field(&login.Email, validation.Required.Error("email must not be blanked"), is.Email.Error("invalid email")),
@@ -236,5 +260,13 @@ func (u *UserService) HashPassword(newUser *model.NewUser) error {
 		return err
 	}
 	newUser.Password = hashPassword
+	return nil
+}
+func (u *UserService) HashPasswordUpdateUser(updateUser *model.UpdateUser) error {
+	hashPassword, err := utilities.HashPassword(updateUser.Password)
+	if err != nil {
+		return err
+	}
+	updateUser.Password = hashPassword
 	return nil
 }

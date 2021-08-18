@@ -46,3 +46,14 @@ func (r *queryResolver) CheckLoginStatus(ctx context.Context) (*model.User, erro
 	result, _ := mapUser(user)
 	return result, nil
 }
+
+func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error) {
+	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
+	//get user based specific id
+	user, err := service.GetOne(bson.M{"_id": id})
+	if err != nil {
+		return nil, err
+	}
+	result, _ := mapUser(user)
+	return result, nil
+}

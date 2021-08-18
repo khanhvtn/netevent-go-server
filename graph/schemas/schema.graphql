@@ -6,14 +6,20 @@ schema {
 
 #Query
   type Query {
+  #User
 	users: [User!]!
+  user(id: String!): User!
 	checkLoginStatus: User!
   }
 
 
 #Mutation
   type Mutation {
+  #User
 	createUser(input: NewUser!): User!
+  updateUser(id: String!, input: UpdateUser!): User!
+  deleteUser(id: String!): User!
 	login(input: Login!): User!
+  logout: String!
   }
 

@@ -163,6 +163,12 @@ type Task struct {
 	EndDate   time.Time          `json:"endDate" bson:"endDate"`
 }
 
+type UpdateUser struct {
+	Email    string   `json:"email" bson:"email"`
+	Password string   `json:"password" bson:"password"`
+	Roles    []string `json:"roles" bson:"roles"`
+}
+
 type User struct {
 	ID        primitive.ObjectID `json:"id" bson:"_id"`
 	Email     string             `json:"email" bson:"email"`

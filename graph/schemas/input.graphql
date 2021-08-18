@@ -1,14 +1,20 @@
 #Input
+#User
 input NewUser {
 	email: String!
 	password: String!
 	confirmPassword: String!
 	roles: [String!]!
-  }
-  
+}
+
 input Login {
 	email: String!
 	password: String!
+}
+input UpdateUser{
+	email: String!
+	password: String!
+	roles: [String!]!
 }
 
 input NewEvent {       
