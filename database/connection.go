@@ -10,6 +10,7 @@ import (
 
 //DB Name
 var dbName = "gonetevent"
+var MongoCNName = "MongoCNName"
 
 // MongoInstance contains the Mongo client and database objects
 type MongoInstance struct {
@@ -23,11 +24,11 @@ var MongoCN = ConnectDB()
 var clientOptions = options.Client().ApplyURI("mongodb://localhost:27017")
 
 /* ConnectDB : Create a connection to MongoDB and return the connection */
-func ConnectDB() MongoInstance {
+func ConnectDB() *MongoInstance {
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		log.Fatal(err.Error())
-		return MongoInstance{}
+		return nil
 	}
 	err = client.Ping(context.TODO(), nil)
 	if err != nil {
@@ -35,7 +36,7 @@ func ConnectDB() MongoInstance {
 	}
 	log.Println("Connect to MongoDB successfully")
 
-	return MongoInstance{Client: client, Db: client.Database(dbName)}
+	return &MongoInstance{Client: client, Db: client.Database(dbName)}
 }
 
 /* ConnectionOK: Check connection and return true or false  */

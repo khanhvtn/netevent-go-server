@@ -107,11 +107,14 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CreateUser func(childComplexity int, input model.NewUser) int
-		DeleteUser func(childComplexity int, id string) int
-		Login      func(childComplexity int, input model.Login) int
-		Logout     func(childComplexity int) int
-		UpdateUser func(childComplexity int, id string, input model.UpdateUser) int
+		CreateEvent func(childComplexity int, input model.NewEvent) int
+		CreateUser  func(childComplexity int, input model.NewUser) int
+		DeleteEvent func(childComplexity int, id string) int
+		DeleteUser  func(childComplexity int, id string) int
+		Login       func(childComplexity int, input model.Login) int
+		Logout      func(childComplexity int) int
+		UpdateEvent func(childComplexity int, id string, input model.UpdateEvent) int
+		UpdateUser  func(childComplexity int, id string, input model.UpdateUser) int
 	}
 
 	Participant struct {
@@ -133,6 +136,8 @@ type ComplexityRoot struct {
 
 	Query struct {
 		CheckLoginStatus func(childComplexity int) int
+		Event            func(childComplexity int, id string) int
+		Events           func(childComplexity int) int
 		User             func(childComplexity int, id string) int
 		Users            func(childComplexity int) int
 	}
@@ -178,6 +183,9 @@ type MutationResolver interface {
 	DeleteUser(ctx context.Context, id string) (*model.User, error)
 	Login(ctx context.Context, input model.Login) (*model.User, error)
 	Logout(ctx context.Context) (string, error)
+	CreateEvent(ctx context.Context, input model.NewEvent) (*model.Event, error)
+	UpdateEvent(ctx context.Context, id string, input model.UpdateEvent) (*model.Event, error)
+	DeleteEvent(ctx context.Context, id string) (*model.Event, error)
 }
 type ParticipantResolver interface {
 	Event(ctx context.Context, obj *model.Participant) (*model.Event, error)
@@ -186,6 +194,8 @@ type QueryResolver interface {
 	Users(ctx context.Context) ([]*model.User, error)
 	User(ctx context.Context, id string) (*model.User, error)
 	CheckLoginStatus(ctx context.Context) (*model.User, error)
+	Events(ctx context.Context) ([]*model.Event, error)
+	Event(ctx context.Context, id string) (*model.Event, error)
 }
 type TaskResolver interface {
 	Event(ctx context.Context, obj *model.Task) (*model.Event, error)
@@ -516,6 +526,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.FacilityHistory.UpdatedAt(childComplexity), true
 
+	case "Mutation.createEvent":
+		if e.complexity.Mutation.CreateEvent == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createEvent_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateEvent(childComplexity, args["input"].(model.NewEvent)), true
+
 	case "Mutation.createUser":
 		if e.complexity.Mutation.CreateUser == nil {
 			break
@@ -527,6 +549,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.CreateUser(childComplexity, args["input"].(model.NewUser)), true
+
+	case "Mutation.deleteEvent":
+		if e.complexity.Mutation.DeleteEvent == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteEvent_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteEvent(childComplexity, args["id"].(string)), true
 
 	case "Mutation.deleteUser":
 		if e.complexity.Mutation.DeleteUser == nil {
@@ -558,6 +592,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.Logout(childComplexity), true
+
+	case "Mutation.updateEvent":
+		if e.complexity.Mutation.UpdateEvent == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateEvent_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateEvent(childComplexity, args["id"].(string), args["input"].(model.UpdateEvent)), true
 
 	case "Mutation.updateUser":
 		if e.complexity.Mutation.UpdateUser == nil {
@@ -675,6 +721,25 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.CheckLoginStatus(childComplexity), true
+
+	case "Query.event":
+		if e.complexity.Query.Event == nil {
+			break
+		}
+
+		args, err := ec.field_Query_event_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Event(childComplexity, args["id"].(string)), true
+
+	case "Query.events":
+		if e.complexity.Query.Events == nil {
+			break
+		}
+
+		return e.complexity.Query.Events(childComplexity), true
 
 	case "Query.user":
 		if e.complexity.Query.User == nil {
@@ -883,13 +948,14 @@ input UpdateUser{
 	roles: [String!]!
 }
 
+#Event
 input NewEvent {       
 	tags:                  [String!]!  
 	tasks:                 [NewTask!]!           
 	facilityHistories:     [NewFacilityHistory!]!  
 	name:                  String!             
 	language:              String!        
-	eventTypeId:             String!        
+	eventTypeId:           String!        
 	mode:                  String!           
 	location:              String!            
 	accommodation:         String!           
@@ -898,10 +964,31 @@ input NewEvent {
 	endDate:               Time!        
 	maxParticipants:       Int!                
 	description:           String!            
-	ownerId:                 String!             
+	ownerId:               String!             
 	budget:                Float!           
 	image:                 String!
 }
+input UpdateEvent {       
+	tags:                  [String!]!  
+	tasks:                 [NewTask!]!           
+	facilityHistories:     [NewFacilityHistory!]!  
+	name:                  String!             
+	language:              String!        
+	eventTypeId:           String!        
+	mode:                  String!           
+	location:              String!            
+	accommodation:         String!           
+	registrationCloseDate: Time!         
+	startDate:             Time!        
+	endDate:               Time!        
+	maxParticipants:       Int!                
+	description:           String!            
+	ownerId:               String!             
+	budget:                Float!           
+	image:                 String!
+}
+
+
 input NewEventType  {
 	name: String!
 }
@@ -915,7 +1002,7 @@ input NewFacilityHistory  {
 	facilityId: String!
 	borrowDate: Time!
 	returnDate: Time!
-	eventId: String!
+	eventId: String
 }
 input NewParticipant  {
 	eventId: String!
@@ -929,7 +1016,7 @@ input NewParticipant  {
 	expectedGraduateDate: Time!
 }
 input NewTask  {
-	eventId: String!
+	eventId: String
 	name: String!
 	userId: String!
 	type: String!
@@ -948,6 +1035,9 @@ input NewTask  {
 	users: [User!]!
   user(id: String!): User!
 	checkLoginStatus: User!
+  #event
+  events: [Event!]!
+  event(id: String!): Event!
   }
 
 
@@ -959,6 +1049,10 @@ input NewTask  {
   deleteUser(id: String!): User!
 	login(input: Login!): User!
   logout: String!
+  #Event
+  createEvent(input: NewEvent!): Event!
+  updateEvent(id: String!, input: UpdateEvent!): Event!
+  deleteEvent(id: String!): Event!
   }
 
 `, BuiltIn: false},
@@ -1079,6 +1173,21 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // region    ***************************** args.gotpl *****************************
 
+func (ec *executionContext) field_Mutation_createEvent_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.NewEvent
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNNewEvent2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐNewEvent(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_createUser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1091,6 +1200,21 @@ func (ec *executionContext) field_Mutation_createUser_args(ctx context.Context, 
 		}
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteEvent_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -1121,6 +1245,30 @@ func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawAr
 		}
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateEvent_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 model.UpdateEvent
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg1, err = ec.unmarshalNUpdateEvent2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐUpdateEvent(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg1
 	return args, nil
 }
 
@@ -1160,6 +1308,21 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_event_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -2953,6 +3116,132 @@ func (ec *executionContext) _Mutation_logout(ctx context.Context, field graphql.
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_createEvent(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_createEvent_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateEvent(rctx, args["input"].(model.NewEvent))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Event)
+	fc.Result = res
+	return ec.marshalNEvent2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEvent(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_updateEvent(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_updateEvent_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateEvent(rctx, args["id"].(string), args["input"].(model.UpdateEvent))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Event)
+	fc.Result = res
+	return ec.marshalNEvent2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEvent(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_deleteEvent(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_deleteEvent_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteEvent(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Event)
+	fc.Result = res
+	return ec.marshalNEvent2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEvent(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Participant_id(ctx context.Context, field graphql.CollectedField, obj *model.Participant) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -3553,6 +3842,83 @@ func (ec *executionContext) _Query_checkLoginStatus(ctx context.Context, field g
 	res := resTmp.(*model.User)
 	fc.Result = res
 	return ec.marshalNUser2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_events(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Events(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Event)
+	fc.Result = res
+	return ec.marshalNEvent2ᚕᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEventᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_event(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_event_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Event(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Event)
+	fc.Result = res
+	return ec.marshalNEvent2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEvent(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -5504,7 +5870,7 @@ func (ec *executionContext) unmarshalInputNewFacilityHistory(ctx context.Context
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("eventId"))
-			it.EventID, err = ec.unmarshalNString2string(ctx, v)
+			it.EventID, err = ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -5608,7 +5974,7 @@ func (ec *executionContext) unmarshalInputNewTask(ctx context.Context, obj inter
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("eventId"))
-			it.EventID, err = ec.unmarshalNString2string(ctx, v)
+			it.EventID, err = ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -5693,6 +6059,154 @@ func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj inter
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("roles"))
 			it.Roles, err = ec.unmarshalNString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdateEvent(ctx context.Context, obj interface{}) (model.UpdateEvent, error) {
+	var it model.UpdateEvent
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "tags":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tags"))
+			it.Tags, err = ec.unmarshalNString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "tasks":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tasks"))
+			it.Tasks, err = ec.unmarshalNNewTask2ᚕᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐNewTaskᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "facilityHistories":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("facilityHistories"))
+			it.FacilityHistories, err = ec.unmarshalNNewFacilityHistory2ᚕᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐNewFacilityHistoryᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			it.Name, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "language":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("language"))
+			it.Language, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eventTypeId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("eventTypeId"))
+			it.EventTypeID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "mode":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("mode"))
+			it.Mode, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "location":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("location"))
+			it.Location, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "accommodation":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("accommodation"))
+			it.Accommodation, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "registrationCloseDate":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("registrationCloseDate"))
+			it.RegistrationCloseDate, err = ec.unmarshalNTime2timeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "startDate":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("startDate"))
+			it.StartDate, err = ec.unmarshalNTime2timeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "endDate":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("endDate"))
+			it.EndDate, err = ec.unmarshalNTime2timeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "maxParticipants":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("maxParticipants"))
+			it.MaxParticipants, err = ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "description":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			it.Description, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "ownerId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ownerId"))
+			it.OwnerID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "budget":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("budget"))
+			it.Budget, err = ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "image":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("image"))
+			it.Image, err = ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -6142,6 +6656,21 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "createEvent":
+			out.Values[i] = ec._Mutation_createEvent(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "updateEvent":
+			out.Values[i] = ec._Mutation_updateEvent(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleteEvent":
+			out.Values[i] = ec._Mutation_deleteEvent(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6306,6 +6835,34 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_checkLoginStatus(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "events":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_events(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "event":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_event(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -6727,6 +7284,43 @@ func (ec *executionContext) marshalNEvent2githubᚗcomᚋkhanhvtnᚋneteventᚑg
 	return ec._Event(ctx, sel, &v)
 }
 
+func (ec *executionContext) marshalNEvent2ᚕᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEventᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Event) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNEvent2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEvent(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
 func (ec *executionContext) marshalNEvent2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEvent(ctx context.Context, sel ast.SelectionSet, v *model.Event) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -6859,6 +7453,11 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 
 func (ec *executionContext) unmarshalNLogin2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐLogin(ctx context.Context, v interface{}) (model.Login, error) {
 	res, err := ec.unmarshalInputLogin(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNNewEvent2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐNewEvent(ctx context.Context, v interface{}) (model.NewEvent, error) {
+	res, err := ec.unmarshalInputNewEvent(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -7024,6 +7623,11 @@ func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel as
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNUpdateEvent2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐUpdateEvent(ctx context.Context, v interface{}) (model.UpdateEvent, error) {
+	res, err := ec.unmarshalInputUpdateEvent(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNUpdateUser2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐUpdateUser(ctx context.Context, v interface{}) (model.UpdateUser, error) {

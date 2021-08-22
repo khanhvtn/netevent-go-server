@@ -6,6 +6,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+var CollectionUserName = "users"
+
 /* Model Type */
 type User struct {
 	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`

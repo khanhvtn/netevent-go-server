@@ -10,6 +10,9 @@ schema {
 	users: [User!]!
   user(id: String!): User!
 	checkLoginStatus: User!
+  #event
+  events: [Event!]!
+  event(id: String!): Event!
   }
 
 
@@ -21,5 +24,9 @@ schema {
   deleteUser(id: String!): User!
 	login(input: Login!): User!
   logout: String!
+  #Event
+  createEvent(input: NewEvent!): Event!
+  updateEvent(id: String!, input: UpdateEvent!): Event!
+  deleteEvent(id: String!): Event!
   }
 

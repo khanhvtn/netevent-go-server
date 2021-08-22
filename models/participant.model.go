@@ -6,6 +6,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+var CollectionParticipantName = "participants"
+
 type Participant struct {
 	ID                   primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	CreatedAt            time.Time          `bson:"createdAt" json:"createdAt"`

@@ -1,6 +1,9 @@
 package services
 
 import (
+	"context"
+	"time"
+
 	"github.com/khanhvtn/netevent-go/database"
 	"github.com/sarulabs/di"
 )
@@ -29,20 +32,37 @@ func New() (*DI, error) {
 // Services contains the definitions of the application services.
 var services = []di.Def{
 	{
-		Name: UserServiceName,
+		Name: database.MongoCNName,
 		Build: func(ctn di.Container) (interface{}, error) {
-			return &UserService{
-				MongoCN: database.MongoCN,
+			return database.ConnectDB(), nil
+		},
+		Close: func(obj interface{}) error {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+			defer cancel()
+			return obj.(*database.MongoInstance).Client.Disconnect(ctx)
+		},
+	},
+	{
+		Name: UserRepositoryName,
+		Build: func(ctn di.Container) (interface{}, error) {
+			return &UserRepository{
+				MongoCN: ctn.Get(database.MongoCNName).(*database.MongoInstance),
 			}, nil
 		},
 	},
 	{
-		Name: EventServiceName,
+		Name: UserServiceName,
 		Build: func(ctn di.Container) (interface{}, error) {
-			return &EventService{
-				MongoCN:                database.MongoCN,
-				TaskService:            ctn.Get(TaskServiceName).(*TaskService),
-				FacilityHistoryService: ctn.Get(FacilityHistoryServiceName).(*FacilityHistoryService),
+			return &UserService{
+				UserRepository: ctn.Get(UserRepositoryName).(*UserRepository),
+			}, nil
+		},
+	},
+	{
+		Name: EventTypeRepositoryName,
+		Build: func(ctn di.Container) (interface{}, error) {
+			return &EventTypeRepository{
+				MongoCN: ctn.Get(database.MongoCNName).(*database.MongoInstance),
 			}, nil
 		},
 	},
@@ -50,7 +70,15 @@ var services = []di.Def{
 		Name: EventTypeServiceName,
 		Build: func(ctn di.Container) (interface{}, error) {
 			return &EventTypeService{
-				MongoCN: database.MongoCN,
+				EventTypeRepository: ctn.Get(EventTypeRepositoryName).(*EventTypeRepository),
+			}, nil
+		},
+	},
+	{
+		Name: FacilityRepositoryName,
+		Build: func(ctn di.Container) (interface{}, error) {
+			return &FacilityRepository{
+				MongoCN: ctn.Get(database.MongoCNName).(*database.MongoInstance),
 			}, nil
 		},
 	},
@@ -58,7 +86,33 @@ var services = []di.Def{
 		Name: FacilityServiceName,
 		Build: func(ctn di.Container) (interface{}, error) {
 			return &FacilityService{
-				MongoCN: database.MongoCN,
+				FacilityRepository: ctn.Get(FacilityRepositoryName).(*FacilityRepository),
+			}, nil
+		},
+	},
+	{
+		Name: EventRepositoryName,
+		Build: func(ctn di.Container) (interface{}, error) {
+			return &EventRepository{
+				MongoCN: ctn.Get(database.MongoCNName).(*database.MongoInstance),
+			}, nil
+		},
+	},
+	{
+		Name: EventServiceName,
+		Build: func(ctn di.Container) (interface{}, error) {
+			return &EventService{
+				EventRepository:           ctn.Get(EventRepositoryName).(*EventRepository),
+				TaskRepository:            ctn.Get(TaskRepositoryName).(*TaskRepository),
+				FacilityHistoryRepository: ctn.Get(FacilityHistoryRepositoryName).(*FacilityHistoryRepository),
+			}, nil
+		},
+	},
+	{
+		Name: FacilityHistoryRepositoryName,
+		Build: func(ctn di.Container) (interface{}, error) {
+			return &FacilityHistoryRepository{
+				MongoCN: ctn.Get(database.MongoCNName).(*database.MongoInstance),
 			}, nil
 		},
 	},
@@ -66,9 +120,15 @@ var services = []di.Def{
 		Name: FacilityHistoryServiceName,
 		Build: func(ctn di.Container) (interface{}, error) {
 			return &FacilityHistoryService{
-				MongoCN:         database.MongoCN,
-				FacilityService: ctn.Get(FacilityServiceName).(*FacilityService),
-				EventService:    ctn.Get(EventServiceName).(*EventService),
+				FacilityHistoryRepository: ctn.Get(FacilityHistoryRepositoryName).(*FacilityHistoryRepository),
+			}, nil
+		},
+	},
+	{
+		Name: ParticipantRepositoryName,
+		Build: func(ctn di.Container) (interface{}, error) {
+			return &ParticipantRepository{
+				MongoCN: ctn.Get(database.MongoCNName).(*database.MongoInstance),
 			}, nil
 		},
 	},
@@ -76,8 +136,15 @@ var services = []di.Def{
 		Name: ParticipantServiceName,
 		Build: func(ctn di.Container) (interface{}, error) {
 			return &ParticipantService{
-				MongoCN:      database.MongoCN,
-				EventService: ctn.Get(EventServiceName).(*EventService),
+				ParticipantRepository: ctn.Get(ParticipantRepositoryName).(*ParticipantRepository),
+			}, nil
+		},
+	},
+	{
+		Name: TaskRepositoryName,
+		Build: func(ctn di.Container) (interface{}, error) {
+			return &TaskRepository{
+				MongoCN: ctn.Get(database.MongoCNName).(*database.MongoInstance),
 			}, nil
 		},
 	},
@@ -85,9 +152,7 @@ var services = []di.Def{
 		Name: TaskServiceName,
 		Build: func(ctn di.Container) (interface{}, error) {
 			return &TaskService{
-				MongoCN:      database.MongoCN,
-				EventService: ctn.Get(EventServiceName).(*EventService),
-				UserService:  ctn.Get(UserServiceName).(*UserService),
+				TaskRepository: ctn.Get(TaskRepositoryName).(*TaskRepository),
 			}, nil
 		},
 	},

@@ -1,120 +1,73 @@
 package services
 
 import (
-	"context"
 	"errors"
+	"sync"
 	"time"
 
-	"github.com/khanhvtn/netevent-go/database"
+	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/khanhvtn/netevent-go/graph/model"
 	"github.com/khanhvtn/netevent-go/models"
-	"github.com/khanhvtn/netevent-go/utilities"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var EventServiceName = "EventServiceName"
 
 type EventService struct {
-	MongoCN                database.MongoInstance
-	TaskService            *TaskService
-	FacilityHistoryService *FacilityHistoryService
-}
-
-/* createContextAndTargetCol: create and return targeted collection based on collection name */
-func (u *EventService) createContextAndTargetCol(colName string) (col *mongo.Collection,
-	ctx context.Context,
-	cancel context.CancelFunc) {
-	col = u.MongoCN.Db.Collection(colName)
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-	return
+	EventRepository           *EventRepository
+	TaskRepository            *TaskRepository
+	FacilityHistoryRepository *FacilityHistoryRepository
 }
 
 /* GetAll: get all data based on condition*/
-func (u *EventService) GetAll() ([]*models.Event, error) {
-	//get a collection , context, cancel func
-	collection, ctx, cancel := u.createContextAndTargetCol("events")
-	defer cancel()
-
-	//create an empty array to store all fields from collection
-	var events []*models.Event = make([]*models.Event, 0)
-
-	//get all record
-	cur, err := collection.Find(ctx, bson.D{})
-	if err != nil {
-		return nil, err
-	}
-	defer cur.Close(ctx)
-
-	//map data to target variable
-	for cur.Next(ctx) {
-		var event models.Event
-		cur.Decode(&event)
-		events = append(events, &event)
-	}
-	//response data to client
-	if events == nil {
-		return make([]*models.Event, 0), nil
-	}
-	return events, nil
+func (u *EventService) GetAll(condition *bson.M) ([]*models.Event, error) {
+	return u.EventRepository.FindAll(nil)
 }
 
 /*GetOne: get one record from a collection  */
 func (u *EventService) GetOne(filter bson.M) (*models.Event, error) {
-	//get a collection , context, cancel func
-	collection, ctx, cancel := u.createContextAndTargetCol("events")
-	defer cancel()
-
-	//convert id to object id when filter contain _id
-	if checkID := filter["_id"]; checkID != nil {
-		if _, ok := checkID.(primitive.ObjectID); !ok {
-			id, err := primitive.ObjectIDFromHex(checkID.(string))
-			if err != nil {
-				return nil, err
-			}
-			filter["_id"] = id
-		}
-	}
-
-	event := models.Event{}
-	//Decode record into result
-	if err := collection.FindOne(ctx, filter).Decode(&event); err != nil {
-		if err == mongo.ErrNoDocuments {
-			//return nil data when id is not existed.
-			return nil, nil
-		}
-		//return err if there is a system error
-		return nil, err
-	}
-
-	return &event, nil
+	return u.EventRepository.FindOne(filter)
 }
 
 /*Create: create a new record to a collection*/
 func (u *EventService) Create(newEvent model.NewEvent) (*models.Event, error) {
 
-	//get a collection , context, cancel func
-	collection, ctx, cancel := u.createContextAndTargetCol("events")
-	defer cancel()
-
 	//create and collect ids for task and facility history
 	taskIds := make([]primitive.ObjectID, 0)
 	facilityHistoryIds := make([]primitive.ObjectID, 0)
+	lenObjectIdsChan := len(newEvent.FacilityHistories) + len(newEvent.Tasks)
+	objectIdsChan := make(chan map[string]primitive.ObjectID, lenObjectIdsChan)
+	errChan := make(chan error, 2)
+	var wg sync.WaitGroup
 
-	for _, task := range newEvent.Tasks {
-		newTask, err := u.TaskService.Create(task)
-		if err != nil {
-			return nil, err
+	wg.Add(1)
+	go u.createTasksForEvent(newEvent.Tasks, objectIdsChan, errChan, &wg)
+	wg.Add(1)
+	go u.createFacilityHistoriesForEvent(newEvent.FacilityHistories, objectIdsChan, errChan, &wg)
+	wg.Wait()
+	close(objectIdsChan)
+	close(errChan)
+
+	for mapObjectId := range objectIdsChan {
+
+		if value, ok := mapObjectId[models.CollectionTaskName]; ok {
+			taskIds = append(taskIds, value)
+		} else {
+			value = mapObjectId[models.CollectionFacilityHistoryName]
+			facilityHistoryIds = append(facilityHistoryIds, value)
 		}
-		taskIds = append(taskIds, newTask.ID)
 	}
-	for _, facilityHistory := range newEvent.FacilityHistories {
-		newFacilityHistory, err := u.FacilityHistoryService.Create(facilityHistory)
+	for err := range errChan {
 		if err != nil {
+			if err := u.cleanUpObjectIds(taskIds, models.CollectionTaskName); err != nil {
+				return nil, err
+			}
+			if err := u.cleanUpObjectIds(facilityHistoryIds, models.CollectionFacilityHistoryName); err != nil {
+				return nil, err
+			}
 			return nil, err
 		}
-		facilityHistoryIds = append(facilityHistoryIds, newFacilityHistory.ID)
 	}
 
 	evenTypeID, err := primitive.ObjectIDFromHex(newEvent.EventTypeID)
@@ -126,7 +79,7 @@ func (u *EventService) Create(newEvent model.NewEvent) (*models.Event, error) {
 		return nil, err
 	}
 
-	//convert o bson.M
+	//convert to bson.M
 	currentTime := time.Now()
 	event := models.Event{
 		Tags:                  newEvent.Tags,
@@ -153,102 +106,187 @@ func (u *EventService) Create(newEvent model.NewEvent) (*models.Event, error) {
 		CreatedAt:             currentTime,
 		UpdatedAt:             currentTime,
 	}
-	newData, err := utilities.InterfaceToBsonM(event)
+	//create event
+	createdEvent, err := u.EventRepository.Create(event)
 	if err != nil {
+		if err := u.cleanUpObjectIds(taskIds, models.CollectionTaskName); err != nil {
+			return nil, err
+		}
+		if err := u.cleanUpObjectIds(facilityHistoryIds, models.CollectionFacilityHistoryName); err != nil {
+			return nil, err
+		}
 		return nil, err
 	}
+	//update event id back to facilityhistories and tasks
+	u.updateEventId(taskIds, createdEvent.ID, "tasks")
+	u.updateEventId(facilityHistoryIds, createdEvent.ID, "facilityHistories")
 
-	//create user in database
-	insertResult, err := collection.InsertOne(ctx, newData)
-	if err != nil {
-		return nil, err
-	}
-
-	return &models.Event{
-		ID:                    insertResult.InsertedID.(primitive.ObjectID),
-		CreatedAt:             currentTime,
-		UpdatedAt:             currentTime,
-		Tags:                  newEvent.Tags,
-		IsApproved:            false,
-		Reviewer:              nil,
-		IsFinished:            false,
-		Tasks:                 taskIds,
-		FacilityHistories:     facilityHistoryIds,
-		Name:                  newEvent.Name,
-		Language:              newEvent.Language,
-		EventType:             evenTypeID,
-		Mode:                  newEvent.Mode,
-		Location:              newEvent.Location,
-		Accommodation:         newEvent.Accommodation,
-		RegistrationCloseDate: newEvent.RegistrationCloseDate,
-		StartDate:             newEvent.StartDate,
-		EndDate:               newEvent.EndDate,
-		MaxParticipants:       newEvent.MaxParticipants,
-		Description:           newEvent.Description,
-		Owner:                 ownerID,
-		Budget:                newEvent.Budget,
-		Image:                 newEvent.Image,
-		IsDeleted:             false}, nil
+	return createdEvent, nil
 }
 
 /*UpdateOne: update one record from a collection*/
 func (u EventService) UpdateOne(filter bson.M, update bson.M) (*models.Event, error) {
-	//get a collection , context, cancel func
-	collection, ctx, cancel := u.createContextAndTargetCol("events")
-	defer cancel()
-
-	//convert id to object id when filter contain _id
-	if checkID := filter["_id"]; checkID != nil {
-		if _, ok := checkID.(primitive.ObjectID); !ok {
-			id, err := primitive.ObjectIDFromHex(checkID.(string))
-			if err != nil {
-				return nil, err
-			}
-			filter["_id"] = id
-		}
-	}
-
-	//update user information
-	newUpdate := bson.M{"$set": update}
-	updateResult, err := collection.UpdateOne(ctx, filter, newUpdate)
-	if err != nil {
-		return nil, err
-	}
-
-	if updateResult.MatchedCount == 0 {
-		return nil, errors.New("id not found")
-	}
-
-	//query the new update
-	event, errQuery := u.GetOne(filter)
-	if errQuery != nil {
-		return nil, errQuery
-	}
-
-	return event, nil
+	return u.EventRepository.UpdateOne(filter, update)
 }
 
 //DeleteOne func is to update one record from a collection
 func (u EventService) DeleteOne(filter bson.M) (*models.Event, error) {
-	//get a collection , context, cancel func
-	collection, ctx, cancel := u.createContextAndTargetCol("events")
-	defer cancel()
+	return u.EventRepository.DeleteOne(filter)
+}
 
-	event, errGet := u.GetOne(filter)
-	if errGet != nil {
-		return nil, errGet
+//validation
+func (u *EventService) ValidateNewEvent(newEvent model.NewEvent) error {
+	return validation.ValidateStruct(&newEvent,
+		validation.Field(&newEvent.Name, validation.Required.Error("name must not be blanked"), validation.By(func(name interface{}) error {
+			event, err := u.GetOne(bson.M{"name": name.(string)})
+			if err != nil {
+				return err
+			}
+			if event != nil {
+				return errors.New("name already existed")
+			}
+			return nil
+
+		})),
+		validation.Field(&newEvent.Tags, validation.Required.Error("tags must not be blanked")),
+		validation.Field(&newEvent.Tasks, validation.Required.Error("tasks password must not be blanked")),
+		validation.Field(&newEvent.FacilityHistories, validation.Required.Error("facility histories must not be blanked")),
+		validation.Field(&newEvent.Language, validation.Required.Error("language must not be blanked")),
+		validation.Field(&newEvent.EventTypeID, validation.Required.Error("event type must not be blanked")),
+		validation.Field(&newEvent.Mode, validation.Required.Error("mode must not be blanked")),
+		validation.Field(&newEvent.Location, validation.Required.Error("location must not be blanked")),
+		validation.Field(&newEvent.Accommodation, validation.Required.Error("accommodation must not be blanked")),
+		validation.Field(&newEvent.StartDate, validation.Required.Error("start date must not be blanked")),
+		validation.Field(&newEvent.EndDate, validation.Required.Error("end date must not be blanked")),
+		validation.Field(&newEvent.RegistrationCloseDate, validation.Required.Error("registration close date must not be blanked")),
+		validation.Field(&newEvent.MaxParticipants, validation.Required.Error("max participants must not be blanked")),
+		validation.Field(&newEvent.Description, validation.Required.Error("description must not be blanked")),
+		validation.Field(&newEvent.OwnerID, validation.Required.Error("owner must not be blanked")),
+		validation.Field(&newEvent.Budget, validation.Required.Error("budget must not be blanked")),
+		validation.Field(&newEvent.Image, validation.Required.Error("image must not be blanked")),
+	)
+}
+
+func (u *EventService) ValidateUpdateEvent(id string, updateEvent model.UpdateEvent) error {
+	return validation.ValidateStruct(&updateEvent,
+		validation.Field(&updateEvent.Name, validation.Required.Error("name must not be blanked"), validation.By(func(name interface{}) error {
+			//get current event
+			currentEvent, err := u.GetOne(bson.M{"_id": id})
+			if err != nil {
+				return err
+			}
+			//check email existed or not
+			event, err := u.GetOne(bson.M{"name": name.(string)})
+			if err != nil {
+				return err
+			}
+			if event != nil && event.Name != currentEvent.Name {
+				return errors.New("name already existed")
+			}
+			return nil
+
+		})),
+		validation.Field(&updateEvent.Tags, validation.Required.Error("tags must not be blanked")),
+		validation.Field(&updateEvent.Tasks, validation.Required.Error("tasks password must not be blanked")),
+		validation.Field(&updateEvent.FacilityHistories, validation.Required.Error("facility histories must not be blanked")),
+		validation.Field(&updateEvent.Language, validation.Required.Error("language must not be blanked")),
+		validation.Field(&updateEvent.EventTypeID, validation.Required.Error("event type must not be blanked")),
+		validation.Field(&updateEvent.Mode, validation.Required.Error("mode must not be blanked")),
+		validation.Field(&updateEvent.Location, validation.Required.Error("location must not be blanked")),
+		validation.Field(&updateEvent.Accommodation, validation.Required.Error("accommodation must not be blanked")),
+		validation.Field(&updateEvent.StartDate, validation.Required.Error("start date must not be blanked")),
+		validation.Field(&updateEvent.EndDate, validation.Required.Error("end date must not be blanked")),
+		validation.Field(&updateEvent.RegistrationCloseDate, validation.Required.Error("registration close date must not be blanked")),
+		validation.Field(&updateEvent.MaxParticipants, validation.Required.Error("max participants must not be blanked")),
+		validation.Field(&updateEvent.Description, validation.Required.Error("description must not be blanked")),
+		validation.Field(&updateEvent.OwnerID, validation.Required.Error("owner must not be blanked")),
+		validation.Field(&updateEvent.Budget, validation.Required.Error("budget must not be blanked")),
+		validation.Field(&updateEvent.Image, validation.Required.Error("image must not be blanked")),
+	)
+}
+
+//
+func (u *EventService) cleanUpObjectIds(objectIds []primitive.ObjectID, collectionName string) error {
+	if collectionName == models.CollectionTaskName {
+		for _, v := range objectIds {
+			_, err := u.TaskRepository.DeleteOne(bson.M{"_id": v.Hex()})
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		for _, v := range objectIds {
+			_, err := u.FacilityHistoryRepository.DeleteOne(bson.M{"_id": v.Hex()})
+			if err != nil {
+				return err
+			}
+		}
 	}
+	return nil
+}
+func (u *EventService) createTasksForEvent(tasks []*model.NewTask, objectIdsChan chan<- map[string]primitive.ObjectID, errChan chan<- error, wg *sync.WaitGroup) {
+	defer wg.Done()
+	var errDB error = nil
+	for _, task := range tasks {
+		userId, err := primitive.ObjectIDFromHex(task.UserID)
+		if err != nil {
+			errDB = err
+			break
+		}
 
-	//delete user from database
-	deleteResult, err := collection.DeleteOne(ctx, filter)
-	if err != nil {
-		//response to client if there is an error.
-		return nil, err
+		newTask, err := u.TaskRepository.Create(&models.Task{
+			Name:      task.Name,
+			Type:      task.Type,
+			User:      userId,
+			StartDate: task.StartDate,
+			EndDate:   task.EndDate,
+		})
+		if err != nil {
+			errDB = err
+			break
+		}
+		objectIdsChan <- map[string]primitive.ObjectID{models.CollectionTaskName: newTask.ID}
 	}
-
-	if deleteResult.DeletedCount == 0 {
-		return nil, errors.New("id not found")
+	errChan <- errDB
+}
+func (u *EventService) createFacilityHistoriesForEvent(facilityHistories []*model.NewFacilityHistory, objectIdsChan chan<- map[string]primitive.ObjectID, errChan chan<- error, wg *sync.WaitGroup) {
+	defer wg.Done()
+	var errDB error = nil
+	for _, facilityHistory := range facilityHistories {
+		facilityId, err := primitive.ObjectIDFromHex(facilityHistory.FacilityID)
+		if err != nil {
+			errDB = err
+			break
+		}
+		newFacilityHistory, err := u.FacilityHistoryRepository.Create(&models.FacilityHistory{
+			Facility:   facilityId,
+			BorrowDate: facilityHistory.BorrowDate,
+			ReturnDate: facilityHistory.ReturnDate,
+		})
+		if err != nil {
+			errDB = err
+			break
+		}
+		objectIdsChan <- map[string]primitive.ObjectID{models.CollectionFacilityHistoryName: newFacilityHistory.ID}
 	}
+	errChan <- errDB
+}
 
-	return event, nil
+func (u *EventService) updateEventId(listTargetIds []primitive.ObjectID, eventId primitive.ObjectID, collectionName string) error {
+	if collectionName == models.CollectionTaskName {
+		for _, v := range listTargetIds {
+			_, err := u.TaskRepository.UpdateOne(bson.M{"_id": v.Hex()}, bson.M{"event": eventId})
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		for _, v := range listTargetIds {
+			_, err := u.FacilityHistoryRepository.UpdateOne(bson.M{"_id": v.Hex()}, bson.M{"event": eventId})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

@@ -55,3 +55,28 @@ func (r *eventResolver) Owner(ctx context.Context, obj *model.Event) (*model.Use
 	results, _ := mapUser(owner)
 	return results, nil
 }
+
+func (r *queryResolver) Events(ctx context.Context) ([]*model.Event, error) {
+	service := r.di.Container.Get(services.EventServiceName).(*services.EventService)
+	events, err := service.GetAll(nil)
+	if err != nil {
+		return nil, err
+	}
+	results := make([]*model.Event, 0)
+	for _, event := range events {
+		mappedEvent, _ := mapEvent(event)
+		results = append(results, mappedEvent)
+	}
+	return results, nil
+}
+
+func (r *queryResolver) Event(ctx context.Context, id string) (*model.Event, error) {
+	service := r.di.Container.Get(services.EventServiceName).(*services.EventService)
+	//get event based specific id
+	event, err := service.GetOne(bson.M{"_id": id})
+	if err != nil {
+		return nil, err
+	}
+	result, _ := mapEvent(event)
+	return result, nil
+}

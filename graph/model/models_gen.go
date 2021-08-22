@@ -103,7 +103,7 @@ type NewFacilityHistory struct {
 	FacilityID string    `json:"facilityId" bson:"facilityId"`
 	BorrowDate time.Time `json:"borrowDate" bson:"borrowDate"`
 	ReturnDate time.Time `json:"returnDate" bson:"returnDate"`
-	EventID    string    `json:"eventId" bson:"eventId"`
+	EventID    *string   `json:"eventId" bson:"eventId"`
 }
 
 type NewParticipant struct {
@@ -119,7 +119,7 @@ type NewParticipant struct {
 }
 
 type NewTask struct {
-	EventID   string    `json:"eventId" bson:"eventId"`
+	EventID   *string   `json:"eventId" bson:"eventId"`
 	Name      string    `json:"name" bson:"name"`
 	UserID    string    `json:"userId" bson:"userId"`
 	Type      string    `json:"type" bson:"type"`
@@ -161,6 +161,26 @@ type Task struct {
 	Type      string             `json:"type" bson:"type"`
 	StartDate time.Time          `json:"startDate" bson:"startDate"`
 	EndDate   time.Time          `json:"endDate" bson:"endDate"`
+}
+
+type UpdateEvent struct {
+	Tags                  []string              `json:"tags" bson:"tags"`
+	Tasks                 []*NewTask            `json:"tasks" bson:"tasks"`
+	FacilityHistories     []*NewFacilityHistory `json:"facilityHistories" bson:"facilityHistories"`
+	Name                  string                `json:"name" bson:"name"`
+	Language              string                `json:"language" bson:"language"`
+	EventTypeID           string                `json:"eventTypeId" bson:"eventTypeId"`
+	Mode                  string                `json:"mode" bson:"mode"`
+	Location              string                `json:"location" bson:"location"`
+	Accommodation         string                `json:"accommodation" bson:"accommodation"`
+	RegistrationCloseDate time.Time             `json:"registrationCloseDate" bson:"registrationCloseDate"`
+	StartDate             time.Time             `json:"startDate" bson:"startDate"`
+	EndDate               time.Time             `json:"endDate" bson:"endDate"`
+	MaxParticipants       int                   `json:"maxParticipants" bson:"maxParticipants"`
+	Description           string                `json:"description" bson:"description"`
+	OwnerID               string                `json:"ownerId" bson:"ownerId"`
+	Budget                float64               `json:"budget" bson:"budget"`
+	Image                 string                `json:"image" bson:"image"`
 }
 
 type UpdateUser struct {

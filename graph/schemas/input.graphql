@@ -17,13 +17,14 @@ input UpdateUser{
 	roles: [String!]!
 }
 
+#Event
 input NewEvent {       
 	tags:                  [String!]!  
 	tasks:                 [NewTask!]!           
 	facilityHistories:     [NewFacilityHistory!]!  
 	name:                  String!             
 	language:              String!        
-	eventTypeId:             String!        
+	eventTypeId:           String!        
 	mode:                  String!           
 	location:              String!            
 	accommodation:         String!           
@@ -32,10 +33,31 @@ input NewEvent {
 	endDate:               Time!        
 	maxParticipants:       Int!                
 	description:           String!            
-	ownerId:                 String!             
+	ownerId:               String!             
 	budget:                Float!           
 	image:                 String!
 }
+input UpdateEvent {       
+	tags:                  [String!]!  
+	tasks:                 [NewTask!]!           
+	facilityHistories:     [NewFacilityHistory!]!  
+	name:                  String!             
+	language:              String!        
+	eventTypeId:           String!        
+	mode:                  String!           
+	location:              String!            
+	accommodation:         String!           
+	registrationCloseDate: Time!         
+	startDate:             Time!        
+	endDate:               Time!        
+	maxParticipants:       Int!                
+	description:           String!            
+	ownerId:               String!             
+	budget:                Float!           
+	image:                 String!
+}
+
+
 input NewEventType  {
 	name: String!
 }
@@ -49,7 +71,7 @@ input NewFacilityHistory  {
 	facilityId: String!
 	borrowDate: Time!
 	returnDate: Time!
-	eventId: String!
+	eventId: String
 }
 input NewParticipant  {
 	eventId: String!
@@ -63,7 +85,7 @@ input NewParticipant  {
 	expectedGraduateDate: Time!
 }
 input NewTask  {
-	eventId: String!
+	eventId: String
 	name: String!
 	userId: String!
 	type: String!

@@ -6,6 +6,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+var CollectionEventName = "events"
+
 /* Model Type */
 type Event struct {
 	ID                    primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
@@ -13,10 +15,10 @@ type Event struct {
 	UpdatedAt             time.Time            `bson:"updatedAt" json:"updatedAt"`
 	Tags                  []string             `bson:"tags" json:"tags"`
 	IsApproved            bool                 `bson:"isApproved" json:"isApproved"`
-	Reviewer              *primitive.ObjectID  `bson:"reviewer;omitempty" json:"reviewer"`
+	Reviewer              *primitive.ObjectID  `bson:"reviewer" json:"reviewer"`
 	IsFinished            bool                 `bson:"isFinished" json:"isFinished"`
-	Tasks                 []primitive.ObjectID `bson:"tasks" json:"tasks"`
-	FacilityHistories     []primitive.ObjectID `bson:"facilityHistories" json:"facilityHistories"`
+	Tasks                 []primitive.ObjectID `bson:"tasks,omitempty" json:"tasks"`
+	FacilityHistories     []primitive.ObjectID `bson:"facilityHistories,omitempty" json:"facilityHistories"`
 	Name                  string               `bson:"name" json:"name"`
 	Language              string               `bson:"language" json:"language"`
 	EventType             primitive.ObjectID   `bson:"eventType" json:"eventType"`

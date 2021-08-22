@@ -13,7 +13,7 @@ import (
 
 func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
 	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
-	users, err := service.GetAll()
+	users, err := service.GetAll(nil)
 	if err != nil {
 		return nil, err
 	}

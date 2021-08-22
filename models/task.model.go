@@ -6,11 +6,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+var CollectionTaskName = "tasks"
+
 type Task struct {
 	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	CreatedAt time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt time.Time          `bson:"updatedAt" json:"updatedAt"`
-	Event     primitive.ObjectID `bson:"event" json:"event"`
+	Event     primitive.ObjectID `bson:"event,omitempty" json:"event"`
 	Name      string             `bson:"name" json:"name"`
 	User      primitive.ObjectID `bson:"user" json:"user"`
 	Type      string             `bson:"type" json:"type"`
