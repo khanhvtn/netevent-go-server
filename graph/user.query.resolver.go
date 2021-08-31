@@ -13,13 +13,16 @@ import (
 
 func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
 	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
-	users, err := service.GetAll(nil)
+	users, err := service.GetAll(bson.M{})
 	if err != nil {
 		return nil, err
 	}
 	results := make([]*model.User, 0)
 	for _, user := range users {
-		mappedUser, _ := mapUser(user)
+		mappedUser, err := r.mapUser(user)
+		if err != nil {
+			return nil, err
+		}
 		results = append(results, mappedUser)
 	}
 	return results, nil
@@ -38,22 +41,37 @@ func (r *queryResolver) CheckLoginStatus(ctx context.Context) (*model.User, erro
 	if err != nil {
 		return nil, err
 	}
-	//get user based specific id
-	user, err := service.GetOne(bson.M{"_id": string(id)})
+	objectId, err := utilities.ConvertStringIdToObjectID(string(id))
 	if err != nil {
 		return nil, err
 	}
-	result, _ := mapUser(user)
+	//get user based specific id
+	user, err := service.GetOne(bson.M{"_id": objectId})
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.mapUser(user)
+	if err != nil {
+		return nil, err
+	}
 	return result, nil
 }
 
 func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error) {
 	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
-	//get user based specific id
-	user, err := service.GetOne(bson.M{"_id": id})
+	//convert string id to object id
+	objectId, err := utilities.ConvertStringIdToObjectID(id)
 	if err != nil {
 		return nil, err
 	}
-	result, _ := mapUser(user)
+	//get user based specific id
+	user, err := service.GetOne(bson.M{"_id": objectId})
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.mapUser(user)
+	if err != nil {
+		return nil, err
+	}
 	return result, nil
 }

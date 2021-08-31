@@ -24,7 +24,10 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 	if err != nil {
 		return nil, err
 	}
-	results, _ := mapUser(newUser)
+	results, err := r.mapUser(newUser)
+	if err != nil {
+		return nil, err
+	}
 	return results, nil
 }
 func (r *mutationResolver) UpdateUser(ctx context.Context, id string, input model.UpdateUser) (*model.User, error) {
@@ -42,20 +45,35 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, id string, input mode
 	if err != nil {
 		return nil, err
 	}
-	updatedUser, err := service.UpdateOne(bson.M{"_id": id}, newUpdate)
+	//convert string id to object id
+	objectId, err := utilities.ConvertStringIdToObjectID(id)
 	if err != nil {
 		return nil, err
 	}
-	results, _ := mapUser(updatedUser)
+	updatedUser, err := service.UpdateOne(bson.M{"_id": objectId}, newUpdate)
+	if err != nil {
+		return nil, err
+	}
+	results, err := r.mapUser(updatedUser)
+	if err != nil {
+		return nil, err
+	}
 	return results, nil
 }
 func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (*model.User, error) {
 	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
-	deletedUser, err := service.DeleteOne(bson.M{"_id": id})
+	objectId, err := utilities.ConvertStringIdToObjectID(id)
 	if err != nil {
 		return nil, err
 	}
-	results, _ := mapUser(deletedUser)
+	deletedUser, err := service.DeleteOne(bson.M{"_id": objectId})
+	if err != nil {
+		return nil, err
+	}
+	results, err := r.mapUser(deletedUser)
+	if err != nil {
+		return nil, err
+	}
 	return results, nil
 }
 
@@ -78,7 +96,10 @@ func (r *mutationResolver) Login(ctx context.Context, input model.Login) (*model
 	//set token
 	ginContext := ctx.Value("gincontext").(*gin.Context)
 	ginContext.SetCookie("netevent", string(encryptedCookie), 3600*24, "/", "localhost", false, true)
-	results, _ := mapUser(user)
+	results, err := r.mapUser(user)
+	if err != nil {
+		return nil, err
+	}
 	return results, nil
 }
 func (r *mutationResolver) Logout(ctx context.Context) (string, error) {

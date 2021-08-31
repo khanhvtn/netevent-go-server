@@ -19,7 +19,7 @@ type UserService struct {
 }
 
 /* GetAll: get all data based on condition*/
-func (u *UserService) GetAll(condition *bson.M) ([]*models.User, error) {
+func (u *UserService) GetAll(condition bson.M) ([]*models.User, error) {
 	return u.UserRepository.Find(condition)
 }
 

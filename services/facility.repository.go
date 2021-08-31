@@ -2,11 +2,11 @@ package services
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/khanhvtn/netevent-go/database"
 	"github.com/khanhvtn/netevent-go/graph/model"
+	"github.com/khanhvtn/netevent-go/helpers"
 	"github.com/khanhvtn/netevent-go/models"
 	"github.com/khanhvtn/netevent-go/utilities"
 	"go.mongodb.org/mongo-driver/bson"
@@ -30,7 +30,7 @@ func (u *FacilityRepository) createContextAndTargetCol(colName string) (col *mon
 }
 
 /* FindAll: get all data based on condition*/
-func (u *FacilityRepository) FindAll(condition *bson.M) ([]*models.Facility, error) {
+func (u *FacilityRepository) FindAll(condition bson.M) ([]*models.Facility, error) {
 	//get a collection , context, cancel func
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionFacilityName)
 	defer cancel()
@@ -39,22 +39,11 @@ func (u *FacilityRepository) FindAll(condition *bson.M) ([]*models.Facility, err
 	var facilities []*models.Facility = make([]*models.Facility, 0)
 
 	//get all record
-	var cur *mongo.Cursor
-	if condition == nil {
-		result, err := collection.Find(ctx, bson.D{})
-		if err != nil {
-			return nil, err
-		}
-		defer result.Close(ctx)
-		cur = result
-	} else {
-		result, err := collection.Find(ctx, condition)
-		if err != nil {
-			return nil, err
-		}
-		defer result.Close(ctx)
-		cur = result
+	cur, err := collection.Find(ctx, condition)
+	if err != nil {
+		return nil, err
 	}
+	defer cur.Close(ctx)
 
 	//map data to target variable
 	for cur.Next(ctx) {
@@ -75,23 +64,12 @@ func (u *FacilityRepository) FindOne(filter bson.M) (*models.Facility, error) {
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionFacilityName)
 	defer cancel()
 
-	//convert id to object id when filter contain _id
-	if checkID := filter["_id"]; checkID != nil {
-		if _, ok := checkID.(primitive.ObjectID); !ok {
-			id, err := primitive.ObjectIDFromHex(checkID.(string))
-			if err != nil {
-				return nil, err
-			}
-			filter["_id"] = id
-		}
-	}
-
 	facility := models.Facility{}
 	//Decode record into result
 	if err := collection.FindOne(ctx, filter).Decode(&facility); err != nil {
 		if err == mongo.ErrNoDocuments {
 			//return nil data when id is not existed.
-			return nil, nil
+			return nil, helpers.NewErrNotFound("facility id is not found")
 		}
 		//return err if there is a system error
 		return nil, err
@@ -109,7 +87,7 @@ func (u *FacilityRepository) Create(newFacility model.NewFacility) (*models.Faci
 
 	//convert to bson.M
 	currentTime := time.Now()
-	facility := model.Facility{
+	facility := models.Facility{
 		Name:      newFacility.Name,
 		Code:      newFacility.Code,
 		Type:      newFacility.Type,
@@ -147,17 +125,6 @@ func (u FacilityRepository) UpdateOne(filter bson.M, update bson.M) (*models.Fac
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionFacilityName)
 	defer cancel()
 
-	//convert id to object id when filter contain _id
-	if checkID := filter["_id"]; checkID != nil {
-		if _, ok := checkID.(primitive.ObjectID); !ok {
-			id, err := primitive.ObjectIDFromHex(checkID.(string))
-			if err != nil {
-				return nil, err
-			}
-			filter["_id"] = id
-		}
-	}
-
 	//update user information
 	newUpdate := bson.M{"$set": update}
 	updateResult, err := collection.UpdateOne(ctx, filter, newUpdate)
@@ -166,7 +133,7 @@ func (u FacilityRepository) UpdateOne(filter bson.M, update bson.M) (*models.Fac
 	}
 
 	if updateResult.MatchedCount == 0 {
-		return nil, errors.New("id not found")
+		return nil, helpers.NewErrNotFound("facility id is not found")
 	}
 
 	//query the new update
@@ -197,7 +164,7 @@ func (u FacilityRepository) DeleteOne(filter bson.M) (*models.Facility, error) {
 	}
 
 	if deleteResult.DeletedCount == 0 {
-		return nil, errors.New("id not found")
+		return nil, helpers.NewErrNotFound("facility id is not found")
 	}
 
 	return facility, nil

@@ -2,10 +2,10 @@ package services
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/khanhvtn/netevent-go/database"
+	"github.com/khanhvtn/netevent-go/helpers"
 	"github.com/khanhvtn/netevent-go/models"
 	"github.com/khanhvtn/netevent-go/utilities"
 	"go.mongodb.org/mongo-driver/bson"
@@ -29,7 +29,7 @@ func (u *EventRepository) createContextAndTargetCol(colName string) (col *mongo.
 }
 
 /* FindAll: get all data based on condition*/
-func (u *EventRepository) FindAll(condition *bson.M) ([]*models.Event, error) {
+func (u *EventRepository) FindAll(condition bson.M) ([]*models.Event, error) {
 	//get a collection , context, cancel func
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionEventName)
 	defer cancel()
@@ -37,19 +37,9 @@ func (u *EventRepository) FindAll(condition *bson.M) ([]*models.Event, error) {
 	//create an empty array to store all fields from collection
 	var events []*models.Event = make([]*models.Event, 0)
 	//get all record
-	var cur *mongo.Cursor
-	if condition == nil {
-		result, err := collection.Find(ctx, bson.D{})
-		if err != nil {
-			return nil, err
-		}
-		cur = result
-	} else {
-		result, err := collection.Find(ctx, condition)
-		if err != nil {
-			return nil, err
-		}
-		cur = result
+	cur, err := collection.Find(ctx, condition)
+	if err != nil {
+		return nil, err
 	}
 	defer cur.Close(ctx)
 
@@ -72,23 +62,12 @@ func (u *EventRepository) FindOne(filter bson.M) (*models.Event, error) {
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionEventName)
 	defer cancel()
 
-	//convert id to object id when filter contain _id
-	if checkID := filter["_id"]; checkID != nil {
-		if _, ok := checkID.(primitive.ObjectID); !ok {
-			id, err := primitive.ObjectIDFromHex(checkID.(string))
-			if err != nil {
-				return nil, err
-			}
-			filter["_id"] = id
-		}
-	}
-
 	event := models.Event{}
 	//Decode record into result
 	if err := collection.FindOne(ctx, filter).Decode(&event); err != nil {
 		if err == mongo.ErrNoDocuments {
 			//return nil data when id is not existed.
-			return nil, nil
+			return nil, helpers.NewErrNotFound("event is not found")
 		}
 		//return err if there is a system error
 		return nil, err
@@ -175,17 +154,6 @@ func (u EventRepository) UpdateOne(filter bson.M, update bson.M) (*models.Event,
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionEventName)
 	defer cancel()
 
-	//convert id to object id when filter contain _id
-	if checkID := filter["_id"]; checkID != nil {
-		if _, ok := checkID.(primitive.ObjectID); !ok {
-			id, err := primitive.ObjectIDFromHex(checkID.(string))
-			if err != nil {
-				return nil, err
-			}
-			filter["_id"] = id
-		}
-	}
-
 	//update user information
 	newUpdate := bson.M{"$set": update}
 	updateResult, err := collection.UpdateOne(ctx, filter, newUpdate)
@@ -194,7 +162,7 @@ func (u EventRepository) UpdateOne(filter bson.M, update bson.M) (*models.Event,
 	}
 
 	if updateResult.MatchedCount == 0 {
-		return nil, errors.New("id not found")
+		return nil, helpers.NewErrNotFound("event id is not found")
 	}
 
 	//query the new update
@@ -225,7 +193,7 @@ func (u EventRepository) DeleteOne(filter bson.M) (*models.Event, error) {
 	}
 
 	if deleteResult.DeletedCount == 0 {
-		return nil, errors.New("id not found")
+		return nil, helpers.NewErrNotFound("event id is not found")
 	}
 
 	return event, nil

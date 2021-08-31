@@ -2,10 +2,10 @@ package services
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/khanhvtn/netevent-go/database"
+	"github.com/khanhvtn/netevent-go/helpers"
 	"github.com/khanhvtn/netevent-go/models"
 	"github.com/khanhvtn/netevent-go/utilities"
 	"go.mongodb.org/mongo-driver/bson"
@@ -29,7 +29,7 @@ func (u *ParticipantRepository) createContextAndTargetCol(colName string) (col *
 }
 
 /* FindAll: get all data based on condition*/
-func (u *ParticipantRepository) FindAll(condition *bson.M) ([]*models.Participant, error) {
+func (u *ParticipantRepository) FindAll(condition bson.M) ([]*models.Participant, error) {
 	//get a collection , context, cancel func
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionParticipantName)
 	defer cancel()
@@ -38,22 +38,11 @@ func (u *ParticipantRepository) FindAll(condition *bson.M) ([]*models.Participan
 	var participants []*models.Participant = make([]*models.Participant, 0)
 
 	//get all record
-	var cur *mongo.Cursor
-	if condition == nil {
-		result, err := collection.Find(ctx, bson.D{})
-		if err != nil {
-			return nil, err
-		}
-		defer result.Close(ctx)
-		cur = result
-	} else {
-		result, err := collection.Find(ctx, condition)
-		if err != nil {
-			return nil, err
-		}
-		defer result.Close(ctx)
-		cur = result
+	cur, err := collection.Find(ctx, condition)
+	if err != nil {
+		return nil, err
 	}
+	defer cur.Close(ctx)
 
 	//map data to target variable
 	for cur.Next(ctx) {
@@ -71,26 +60,15 @@ func (u *ParticipantRepository) FindAll(condition *bson.M) ([]*models.Participan
 /*FindOne: get one record from a collection  */
 func (u *ParticipantRepository) FindOne(filter bson.M) (*models.Participant, error) {
 	//get a collection , context, cancel func
-	collection, ctx, cancel := u.createContextAndTargetCol("participant")
+	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionParticipantName)
 	defer cancel()
-
-	//convert id to object id when filter contain _id
-	if checkID := filter["_id"]; checkID != nil {
-		if _, ok := checkID.(primitive.ObjectID); !ok {
-			id, err := primitive.ObjectIDFromHex(checkID.(string))
-			if err != nil {
-				return nil, err
-			}
-			filter["_id"] = id
-		}
-	}
 
 	participant := models.Participant{}
 	//Decode record into result
 	if err := collection.FindOne(ctx, filter).Decode(&participant); err != nil {
 		if err == mongo.ErrNoDocuments {
 			//return nil data when id is not existed.
-			return nil, nil
+			return nil, helpers.NewErrNotFound("participant id is not found")
 		}
 		//return err if there is a system error
 		return nil, err
@@ -157,18 +135,6 @@ func (u ParticipantRepository) UpdateOne(filter bson.M, update bson.M) (*models.
 	//get a collection , context, cancel func
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionParticipantName)
 	defer cancel()
-
-	//convert id to object id when filter contain _id
-	if checkID := filter["_id"]; checkID != nil {
-		if _, ok := checkID.(primitive.ObjectID); !ok {
-			id, err := primitive.ObjectIDFromHex(checkID.(string))
-			if err != nil {
-				return nil, err
-			}
-			filter["_id"] = id
-		}
-	}
-
 	//update user information
 	newUpdate := bson.M{"$set": update}
 	updateResult, err := collection.UpdateOne(ctx, filter, newUpdate)
@@ -177,7 +143,7 @@ func (u ParticipantRepository) UpdateOne(filter bson.M, update bson.M) (*models.
 	}
 
 	if updateResult.MatchedCount == 0 {
-		return nil, errors.New("id not found")
+		return nil, helpers.NewErrNotFound("participant id is not found")
 	}
 
 	//query the new update
@@ -208,7 +174,7 @@ func (u ParticipantRepository) DeleteOne(filter bson.M) (*models.Participant, er
 	}
 
 	if deleteResult.DeletedCount == 0 {
-		return nil, errors.New("id not found")
+		return nil, helpers.NewErrNotFound("participant id is not found")
 	}
 
 	return participant, nil

@@ -5,6 +5,7 @@ import (
 	"github.com/khanhvtn/netevent-go/graph/model"
 	"github.com/khanhvtn/netevent-go/models"
 	"github.com/khanhvtn/netevent-go/services"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // This file will not be regenerated automatically.
@@ -50,7 +51,7 @@ func (r *Resolver) Participant() generated.ParticipantResolver { return &partici
 // Task returns generated.TaskResolver implementation.
 func (r *Resolver) Task() generated.TaskResolver { return &taskResolver{r} }
 
-func mapUser(m *models.User) (*model.User, error) {
+func (r *Resolver) mapUser(m *models.User) (*model.User, error) {
 	return &model.User{
 		ID:        m.ID,
 		Email:     m.Email,
@@ -60,7 +61,7 @@ func mapUser(m *models.User) (*model.User, error) {
 		UpdatedAt: m.UpdatedAt,
 	}, nil
 }
-func mapEvent(m *models.Event) (*model.Event, error) {
+func (r *Resolver) mapEvent(m *models.Event) (*model.Event, error) {
 	return &model.Event{
 		ID:                    m.ID,
 		CreatedAt:             m.CreatedAt,
@@ -84,7 +85,7 @@ func mapEvent(m *models.Event) (*model.Event, error) {
 	}, nil
 }
 
-func mapEventType(m *models.EventType) (*model.EventType, error) {
+func (r *Resolver) mapEventType(m *models.EventType) (*model.EventType, error) {
 	return &model.EventType{
 		ID:        m.ID,
 		CreatedAt: m.CreatedAt,
@@ -93,7 +94,7 @@ func mapEventType(m *models.EventType) (*model.EventType, error) {
 		IsDeleted: m.IsDeleted,
 	}, nil
 }
-func mapFacility(m *models.Facility) (*model.Facility, error) {
+func (r *Resolver) mapFacility(m *models.Facility) (*model.Facility, error) {
 	return &model.Facility{
 		ID:        m.ID,
 		CreatedAt: m.CreatedAt,
@@ -105,16 +106,46 @@ func mapFacility(m *models.Facility) (*model.Facility, error) {
 		IsDeleted: m.IsDeleted,
 	}, nil
 }
-func mapFacilityHistory(m *models.FacilityHistory) (*model.FacilityHistory, error) {
+func (r *Resolver) mapFacilityHistory(m *models.FacilityHistory) (*model.FacilityHistory, error) {
+	facilityService := r.di.Container.Get(services.FacilityServiceName).(*services.FacilityService)
+	eventService := r.di.Container.Get(services.EventServiceName).(*services.EventService)
+	facility, err := facilityService.GetOne(bson.M{"_id": m.Facility})
+	if err != nil {
+		return nil, err
+	}
+	event, err := eventService.GetOne(bson.M{"_id": m.Event})
+	if err != nil {
+		return nil, err
+	}
+	graphModelFacility, err := r.mapFacility(facility)
+	if err != nil {
+		return nil, err
+	}
+	graphModelEvent, err := r.mapEvent(event)
+	if err != nil {
+		return nil, err
+	}
 	return &model.FacilityHistory{
 		ID:         m.ID,
 		CreatedAt:  m.CreatedAt,
 		UpdatedAt:  m.UpdatedAt,
 		BorrowDate: m.BorrowDate,
 		ReturnDate: m.ReturnDate,
+		Event:      graphModelEvent,
+		Facility:   graphModelFacility,
 	}, nil
 }
-func mapParticipant(m *models.Participant) (*model.Participant, error) {
+func (r *Resolver) mapParticipant(m *models.Participant) (*model.Participant, error) {
+	eventService := r.di.Container.Get(services.EventServiceName).(*services.EventService)
+
+	event, err := eventService.GetOne(bson.M{"_id": m.Event})
+	if err != nil {
+		return nil, err
+	}
+	graphModelEvent, err := r.mapEvent(event)
+	if err != nil {
+		return nil, err
+	}
 	return &model.Participant{
 		ID:                   m.ID,
 		CreatedAt:            m.CreatedAt,
@@ -129,9 +160,28 @@ func mapParticipant(m *models.Participant) (*model.Participant, error) {
 		Phone:                m.Phone,
 		Dob:                  m.DOB,
 		ExpectedGraduateDate: m.ExpectedGraduateDate,
+		Event:                graphModelEvent,
 	}, nil
 }
-func mapTask(m *models.Task) (*model.Task, error) {
+func (r *Resolver) mapTask(m *models.Task) (*model.Task, error) {
+	userService := r.di.Container.Get(services.UserServiceName).(*services.UserService)
+	eventService := r.di.Container.Get(services.EventServiceName).(*services.EventService)
+	user, err := userService.GetOne(bson.M{"_id": m.User})
+	if err != nil {
+		return nil, err
+	}
+	event, err := eventService.GetOne(bson.M{"_id": m.Event})
+	if err != nil {
+		return nil, err
+	}
+	graphModelUser, err := r.mapUser(user)
+	if err != nil {
+		return nil, err
+	}
+	graphModelEvent, err := r.mapEvent(event)
+	if err != nil {
+		return nil, err
+	}
 	return &model.Task{
 		ID:        m.ID,
 		CreatedAt: m.CreatedAt,
@@ -140,5 +190,7 @@ func mapTask(m *models.Task) (*model.Task, error) {
 		Type:      m.Type,
 		StartDate: m.StartDate,
 		EndDate:   m.EndDate,
+		Event:     graphModelEvent,
+		User:      graphModelUser,
 	}, nil
 }

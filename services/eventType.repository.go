@@ -2,11 +2,11 @@ package services
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/khanhvtn/netevent-go/database"
 	"github.com/khanhvtn/netevent-go/graph/model"
+	"github.com/khanhvtn/netevent-go/helpers"
 	"github.com/khanhvtn/netevent-go/models"
 	"github.com/khanhvtn/netevent-go/utilities"
 	"go.mongodb.org/mongo-driver/bson"
@@ -30,7 +30,7 @@ func (u *EventTypeRepository) createContextAndTargetCol(colName string) (col *mo
 }
 
 /* GetAll: get all data based on condition*/
-func (u *EventTypeRepository) Find(condition *bson.M) ([]*models.EventType, error) {
+func (u *EventTypeRepository) Find(condition bson.M) ([]*models.EventType, error) {
 	//get a collection , context, cancel func
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionEventTypeName)
 	defer cancel()
@@ -39,22 +39,11 @@ func (u *EventTypeRepository) Find(condition *bson.M) ([]*models.EventType, erro
 	var eventTypes []*models.EventType = make([]*models.EventType, 0)
 
 	//get all record
-	var cur *mongo.Cursor
-	if condition == nil {
-		result, err := collection.Find(ctx, bson.D{})
-		if err != nil {
-			return nil, err
-		}
-		defer result.Close(ctx)
-		cur = result
-	} else {
-		result, err := collection.Find(ctx, condition)
-		if err != nil {
-			return nil, err
-		}
-		defer result.Close(ctx)
-		cur = result
+	cur, err := collection.Find(ctx, condition)
+	if err != nil {
+		return nil, err
 	}
+	defer cur.Close(ctx)
 
 	//map data to target variable
 	for cur.Next(ctx) {
@@ -72,26 +61,15 @@ func (u *EventTypeRepository) Find(condition *bson.M) ([]*models.EventType, erro
 /*GetOne: get one record from a collection  */
 func (u *EventTypeRepository) FindOne(filter bson.M) (*models.EventType, error) {
 	//get a collection , context, cancel func
-	collection, ctx, cancel := u.createContextAndTargetCol("facilities")
+	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionEventTypeName)
 	defer cancel()
-
-	//convert id to object id when filter contain _id
-	if checkID := filter["_id"]; checkID != nil {
-		if _, ok := checkID.(primitive.ObjectID); !ok {
-			id, err := primitive.ObjectIDFromHex(checkID.(string))
-			if err != nil {
-				return nil, err
-			}
-			filter["_id"] = id
-		}
-	}
 
 	eventType := models.EventType{}
 	//Decode record into result
 	if err := collection.FindOne(ctx, filter).Decode(&eventType); err != nil {
 		if err == mongo.ErrNoDocuments {
 			//return nil data when id is not existed.
-			return nil, nil
+			return nil, helpers.NewErrNotFound("event type id is not found")
 		}
 		//return err if there is a system error
 		return nil, err
@@ -109,7 +87,7 @@ func (u *EventTypeRepository) Create(newEventType model.NewEventType) (*models.E
 
 	//convert to bson.M
 	currentTime := time.Now()
-	eventType := model.EventType{
+	eventType := models.EventType{
 		Name:      newEventType.Name,
 		CreatedAt: currentTime,
 		UpdatedAt: currentTime,
@@ -141,17 +119,6 @@ func (u EventTypeRepository) UpdateOne(filter bson.M, update bson.M) (*models.Ev
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionEventTypeName)
 	defer cancel()
 
-	//convert id to object id when filter contain _id
-	if checkID := filter["_id"]; checkID != nil {
-		if _, ok := checkID.(primitive.ObjectID); !ok {
-			id, err := primitive.ObjectIDFromHex(checkID.(string))
-			if err != nil {
-				return nil, err
-			}
-			filter["_id"] = id
-		}
-	}
-
 	//update user information
 	newUpdate := bson.M{"$set": update}
 	updateResult, err := collection.UpdateOne(ctx, filter, newUpdate)
@@ -160,7 +127,7 @@ func (u EventTypeRepository) UpdateOne(filter bson.M, update bson.M) (*models.Ev
 	}
 
 	if updateResult.MatchedCount == 0 {
-		return nil, errors.New("id not found")
+		return nil, helpers.NewErrNotFound("event type id is not found")
 	}
 
 	//query the new update
@@ -191,7 +158,7 @@ func (u EventTypeRepository) DeleteOne(filter bson.M) (*models.EventType, error)
 	}
 
 	if deleteResult.DeletedCount == 0 {
-		return nil, errors.New("id not found")
+		return nil, helpers.NewErrNotFound("event type id is not found")
 	}
 
 	return eventType, nil

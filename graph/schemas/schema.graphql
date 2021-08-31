@@ -10,9 +10,24 @@ schema {
 	users: [User!]!
   user(id: String!): User!
 	checkLoginStatus: User!
-  #event
+  #Event
   events: [Event!]!
   event(id: String!): Event!
+  #EventType
+  eventTypes: [EventType!]!
+  eventType(id: String!): EventType!
+  #Facility
+  facilities: [Facility!]!
+  facility(id: String!): Facility!
+  #FacilityHistory
+  facilityHistories: [FacilityHistory!]!
+  facilityHistory(id: String!): FacilityHistory!
+  #Participant
+  participants: [Participant!]!
+  participant(id: String!): Participant!
+  #Task
+  tasks: [Task!]!
+  task(id: String!): Task!
   }
 
 
@@ -24,9 +39,35 @@ schema {
   deleteUser(id: String!): User!
 	login(input: Login!): User!
   logout: String!
+  
   #Event
   createEvent(input: NewEvent!): Event!
   updateEvent(id: String!, input: UpdateEvent!): Event!
   deleteEvent(id: String!): Event!
+
+  #EventType
+  createEventType(input: NewEventType!): EventType!
+  updateEventType(id: String!, input: UpdateEventType!): EventType!
+  deleteEventType(id: String!): EventType!
+
+  #Facility
+  createFacility(input: NewFacility!): Facility!
+  updateFacility(id: String!, input: UpdateFacility!): Facility!
+  deleteFacility(id: String!): Facility!
+  
+  #FacilityHistory
+  createFacilityHistory(input: NewFacilityHistory!): FacilityHistory!
+  updateFacilityHistory(id: String!, input: UpdateFacilityHistory!): FacilityHistory!
+  deleteFacilityHistory(id: String!): FacilityHistory!
+  
+  #Task
+  createTask(input: NewTask!): Task!
+  updateTask(id: String!, input: UpdateTask!): Task!
+  deleteTask(id: String!): Task!
+
+  #Participant
+  createParticipant(input: NewParticipant!): Participant!
+  updateParticipant(id: String!, input: UpdateParticipant!): Participant!
+  deleteParticipant(id: String!): Participant!
   }
 

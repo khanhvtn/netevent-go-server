@@ -4,9 +4,9 @@ go 1.16
 
 require (
 	github.com/99designs/gqlgen v0.13.0
+	github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496 // indirect
 	github.com/gin-gonic/gin v1.7.3
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
-	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/joho/godotenv v1.3.0
 	github.com/klauspost/compress v1.12.2 // indirect
 	github.com/sarulabs/di v2.0.0+incompatible

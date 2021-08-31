@@ -55,24 +55,52 @@ input UpdateEvent {
 	ownerId:               String!             
 	budget:                Float!           
 	image:                 String!
+	isApproved:            Boolean!
+	reviewer:              String
+	isFinished:            Boolean!
+	isDeleted:             Boolean!
 }
 
 
+
+#EventType
 input NewEventType  {
 	name: String!
 }
+input UpdateEventType  {
+	name: String!
+	isDeleted: Boolean!
+}
 
+#Facility
 input NewFacility  {
 	name: String!
 	code: String!
 	type: String!
 }
+input UpdateFacility {       
+	name: String!
+	code: String!
+	type: String!
+	status: Boolean!
+	isDeleted: Boolean!
+}
+#FacilityHistory
 input NewFacilityHistory  {
+	id: String
 	facilityId: String!
 	borrowDate: Time!
 	returnDate: Time!
 	eventId: String
 }
+input UpdateFacilityHistory  {
+	facilityId: String!
+	borrowDate: Time!
+	returnDate: Time!
+	eventId: String!
+}
+
+#Participant
 input NewParticipant  {
 	eventId: String!
 	email: String!
@@ -84,7 +112,31 @@ input NewParticipant  {
 	dob: Time!
 	expectedGraduateDate: Time!
 }
+input UpdateParticipant  {
+	eventId: String!
+	email: String!
+	name: String!
+	academic: String!
+	school: String!
+	major: String!
+	phone: String!
+	dob: Time!
+	expectedGraduateDate: Time!
+	isValid: Boolean!
+	isAttended: Boolean!
+}
+
+#Task
 input NewTask  {
+	id: String
+	eventId: String
+	name: String!
+	userId: String!
+	type: String!
+	startDate: Time!
+	endDate: Time!
+}
+input UpdateTask  {
 	eventId: String
 	name: String!
 	userId: String!
