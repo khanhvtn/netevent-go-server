@@ -43,6 +43,8 @@ models:
         resolver: true # force a resolver to be generated
       owner:
         resolver: true # force a resolver to be generated
+      reviewer:
+        resolver: true # force a resolver to be generated
   FacilityHistory:
     fields:
       facility:

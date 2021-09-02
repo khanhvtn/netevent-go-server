@@ -10,8 +10,13 @@ import (
 )
 
 func (r *participantResolver) Event(ctx context.Context, obj *model.Participant) (*model.Event, error) {
-	service := r.di.Container.Get(services.EventServiceName).(*services.EventService)
-	event, err := service.GetOne(bson.M{"_id": obj.Event.ID})
+	eventService := r.di.Container.Get(services.EventServiceName).(*services.EventService)
+	participantService := r.di.Container.Get(services.ParticipantServiceName).(*services.ParticipantService)
+	participant, err := participantService.GetOne(bson.M{"_id": obj.ID})
+	if err != nil {
+		return nil, err
+	}
+	event, err := eventService.GetOne(bson.M{"_id": participant.Event})
 	if err != nil {
 		return nil, err
 	}

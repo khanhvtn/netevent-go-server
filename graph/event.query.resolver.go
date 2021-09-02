@@ -46,8 +46,13 @@ func (r *eventResolver) FacilityHistories(ctx context.Context, obj *model.Event)
 }
 
 func (r *eventResolver) EventType(ctx context.Context, obj *model.Event) (*model.EventType, error) {
-	service := r.di.Container.Get(services.EventTypeServiceName).(*services.EventTypeService)
-	eventType, err := service.GetOne(bson.M{"_id": obj.EventType.ID})
+	eventTypeService := r.di.Container.Get(services.EventTypeServiceName).(*services.EventTypeService)
+	eventService := r.di.Container.Get(services.EventServiceName).(*services.EventService)
+	event, err := eventService.GetOne(bson.M{"_id": obj.ID})
+	if err != nil {
+		return nil, err
+	}
+	eventType, err := eventTypeService.GetOne(bson.M{"_id": event.EventType})
 	if err != nil {
 		return nil, err
 	}
@@ -59,12 +64,35 @@ func (r *eventResolver) EventType(ctx context.Context, obj *model.Event) (*model
 }
 
 func (r *eventResolver) Owner(ctx context.Context, obj *model.Event) (*model.User, error) {
-	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
-	owner, err := service.GetOne(bson.M{"_id": obj.Owner.ID})
+	userService := r.di.Container.Get(services.UserServiceName).(*services.UserService)
+	eventService := r.di.Container.Get(services.EventServiceName).(*services.EventService)
+	event, err := eventService.GetOne(bson.M{"_id": obj.ID})
 	if err != nil {
 		return nil, err
 	}
-	results, err := r.mapUser(owner)
+	user, err := userService.GetOne(bson.M{"_id": event.Owner})
+	if err != nil {
+		return nil, err
+	}
+	results, err := r.mapUser(user)
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func (r *eventResolver) Reviewer(ctx context.Context, obj *model.Event) (*model.User, error) {
+	reviewerService := r.di.Container.Get(services.UserServiceName).(*services.UserService)
+	eventService := r.di.Container.Get(services.EventServiceName).(*services.EventService)
+	event, err := eventService.GetOne(bson.M{"_id": obj.ID})
+	if err != nil {
+		return nil, err
+	}
+	reviewer, err := reviewerService.GetOne(bson.M{"_id": event.Reviewer})
+	if err != nil {
+		return nil, err
+	}
+	results, err := r.mapUser(reviewer)
 	if err != nil {
 		return nil, err
 	}

@@ -190,6 +190,8 @@ type ComplexityRoot struct {
 }
 
 type EventResolver interface {
+	Reviewer(ctx context.Context, obj *model.Event) (*model.User, error)
+
 	Tasks(ctx context.Context, obj *model.Event) ([]*model.Task, error)
 	FacilityHistories(ctx context.Context, obj *model.Event) ([]*model.FacilityHistory, error)
 
@@ -2318,14 +2320,14 @@ func (ec *executionContext) _Event_reviewer(ctx context.Context, field graphql.C
 		Object:     "Event",
 		Field:      field,
 		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Reviewer, nil
+		return ec.resolvers.Event().Reviewer(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -8397,7 +8399,16 @@ func (ec *executionContext) _Event(ctx context.Context, sel ast.SelectionSet, ob
 				atomic.AddUint32(&invalids, 1)
 			}
 		case "reviewer":
-			out.Values[i] = ec._Event_reviewer(ctx, field, obj)
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Event_reviewer(ctx, field, obj)
+				return res
+			})
 		case "isFinished":
 			out.Values[i] = ec._Event_isFinished(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

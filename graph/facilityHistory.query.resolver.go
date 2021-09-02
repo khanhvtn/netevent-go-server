@@ -10,8 +10,13 @@ import (
 )
 
 func (r *facilityHistoryResolver) Facility(ctx context.Context, obj *model.FacilityHistory) (*model.Facility, error) {
-	service := r.di.Container.Get(services.FacilityServiceName).(*services.FacilityService)
-	facility, err := service.GetOne(bson.M{"_id": obj.Facility.ID})
+	facilityService := r.di.Container.Get(services.FacilityServiceName).(*services.FacilityService)
+	facilityHistoryService := r.di.Container.Get(services.FacilityHistoryServiceName).(*services.FacilityHistoryService)
+	facilityHistory, err := facilityHistoryService.GetOne(bson.M{"_id": obj.ID})
+	if err != nil {
+		return nil, err
+	}
+	facility, err := facilityService.GetOne(bson.M{"_id": facilityHistory.Facility})
 	if err != nil {
 		return nil, err
 	}
@@ -23,8 +28,13 @@ func (r *facilityHistoryResolver) Facility(ctx context.Context, obj *model.Facil
 }
 
 func (r *facilityHistoryResolver) Event(ctx context.Context, obj *model.FacilityHistory) (*model.Event, error) {
-	service := r.di.Container.Get(services.EventServiceName).(*services.EventService)
-	event, err := service.GetOne(bson.M{"_id": obj.Event.ID})
+	facilityHistoryService := r.di.Container.Get(services.FacilityHistoryServiceName).(*services.FacilityHistoryService)
+	eventService := r.di.Container.Get(services.EventServiceName).(*services.EventService)
+	facilityHistory, err := facilityHistoryService.GetOne(bson.M{"_id": obj.ID})
+	if err != nil {
+		return nil, err
+	}
+	event, err := eventService.GetOne(bson.M{"_id": facilityHistory.Event})
 	if err != nil {
 		return nil, err
 	}
