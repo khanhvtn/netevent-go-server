@@ -4,19 +4,31 @@ import (
 	"context"
 
 	"github.com/khanhvtn/netevent-go/graph/model"
+	"github.com/khanhvtn/netevent-go/models"
 	"github.com/khanhvtn/netevent-go/services"
 	"github.com/khanhvtn/netevent-go/utilities"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (r *mutationResolver) CreateParticipant(ctx context.Context, input model.NewParticipant) (*model.Participant, error) {
-	service := r.di.Container.Get(services.ParticipantServiceName).(*services.ParticipantService)
+	participantService := r.di.Container.Get(services.ParticipantServiceName).(*services.ParticipantService)
+	eventService := r.di.Container.Get(services.EventServiceName).(*services.EventService)
 	//check input
-	if err := service.ValidateNewParticipant(input); err != nil {
+	if err := participantService.ValidateNewParticipant(input); err != nil {
 		return nil, err
 	}
-	newParticipant, err := service.Create(input)
+	newParticipant, err := participantService.Create(input)
 	if err != nil {
+		return nil, err
+	}
+
+	event, err := eventService.GetOne(bson.M{"_id": newParticipant.Event})
+	if err != nil {
+		return nil, err
+	}
+
+	//send invitation to particpant
+	if err := utilities.SendMail(event.Name, []*models.Participant{newParticipant}); err != nil {
 		return nil, err
 	}
 	results, err := r.mapParticipant(newParticipant)
