@@ -28,7 +28,7 @@ func (r *mutationResolver) CreateParticipant(ctx context.Context, input model.Ne
 	}
 
 	//send invitation to particpant
-	if err := utilities.SendMail(event.Name, []*models.Participant{newParticipant}); err != nil {
+	if err := utilities.SendMail(event.Name, newParticipant.ID.Hex(), event.ID.Hex(), []*models.Participant{newParticipant}); err != nil {
 		return nil, err
 	}
 	results, err := r.mapParticipant(newParticipant)
