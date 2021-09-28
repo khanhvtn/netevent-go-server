@@ -33,6 +33,14 @@ type Event {
 	budget:                Float!           
 	image:                 String!           
 	isDeleted:             Boolean!
+	customizeFields:	   [CustomizeField]
+}
+
+type CustomizeField {
+	name: String!
+	type: String!
+	value: [String!]!
+	required: Boolean!
 }
 
 

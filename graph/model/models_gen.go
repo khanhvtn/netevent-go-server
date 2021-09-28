@@ -8,6 +8,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type CustomizeField struct {
+	Name     string   `json:"name" bson:"name"`
+	Type     string   `json:"type" bson:"type"`
+	Value    []string `json:"value" bson:"value"`
+	Required bool     `json:"required" bson:"required"`
+}
+
 type Event struct {
 	ID                    primitive.ObjectID `json:"id" bson:"_id"`
 	CreatedAt             time.Time          `json:"createdAt" bson:"createdAt"`
@@ -33,6 +40,7 @@ type Event struct {
 	Budget                float64            `json:"budget" bson:"budget"`
 	Image                 string             `json:"image" bson:"image"`
 	IsDeleted             bool               `json:"isDeleted" bson:"isDeleted"`
+	CustomizeFields       []*CustomizeField  `json:"customizeFields" bson:"customizeFields"`
 }
 
 type EventType struct {
@@ -64,29 +72,37 @@ type FacilityHistory struct {
 	Event      *Event             `json:"event" bson:"event"`
 }
 
+type InputCustomizeField struct {
+	Name     string   `json:"name" bson:"name"`
+	Type     string   `json:"type" bson:"type"`
+	Value    []string `json:"value" bson:"value"`
+	Required bool     `json:"required" bson:"required"`
+}
+
 type Login struct {
 	Email    string `json:"email" bson:"email"`
 	Password string `json:"password" bson:"password"`
 }
 
 type NewEvent struct {
-	Tags                  []string              `json:"tags" bson:"tags"`
-	Tasks                 []*NewTask            `json:"tasks" bson:"tasks"`
-	FacilityHistories     []*NewFacilityHistory `json:"facilityHistories" bson:"facilityHistories"`
-	Name                  string                `json:"name" bson:"name"`
-	Language              string                `json:"language" bson:"language"`
-	EventTypeID           string                `json:"eventTypeId" bson:"eventTypeId"`
-	Mode                  string                `json:"mode" bson:"mode"`
-	Location              string                `json:"location" bson:"location"`
-	Accommodation         string                `json:"accommodation" bson:"accommodation"`
-	RegistrationCloseDate time.Time             `json:"registrationCloseDate" bson:"registrationCloseDate"`
-	StartDate             time.Time             `json:"startDate" bson:"startDate"`
-	EndDate               time.Time             `json:"endDate" bson:"endDate"`
-	MaxParticipants       int                   `json:"maxParticipants" bson:"maxParticipants"`
-	Description           string                `json:"description" bson:"description"`
-	OwnerID               string                `json:"ownerId" bson:"ownerId"`
-	Budget                float64               `json:"budget" bson:"budget"`
-	Image                 string                `json:"image" bson:"image"`
+	Tags                  []string               `json:"tags" bson:"tags"`
+	Tasks                 []*NewTask             `json:"tasks" bson:"tasks"`
+	FacilityHistories     []*NewFacilityHistory  `json:"facilityHistories" bson:"facilityHistories"`
+	Name                  string                 `json:"name" bson:"name"`
+	Language              string                 `json:"language" bson:"language"`
+	EventTypeID           string                 `json:"eventTypeId" bson:"eventTypeId"`
+	Mode                  string                 `json:"mode" bson:"mode"`
+	Location              string                 `json:"location" bson:"location"`
+	Accommodation         string                 `json:"accommodation" bson:"accommodation"`
+	RegistrationCloseDate time.Time              `json:"registrationCloseDate" bson:"registrationCloseDate"`
+	StartDate             time.Time              `json:"startDate" bson:"startDate"`
+	EndDate               time.Time              `json:"endDate" bson:"endDate"`
+	MaxParticipants       int                    `json:"maxParticipants" bson:"maxParticipants"`
+	Description           string                 `json:"description" bson:"description"`
+	OwnerID               string                 `json:"ownerId" bson:"ownerId"`
+	Budget                float64                `json:"budget" bson:"budget"`
+	Image                 string                 `json:"image" bson:"image"`
+	CustomizeFields       []*InputCustomizeField `json:"customizeFields" bson:"customizeFields"`
 }
 
 type NewEventType struct {
@@ -166,27 +182,28 @@ type Task struct {
 }
 
 type UpdateEvent struct {
-	Tags                  []string              `json:"tags" bson:"tags"`
-	Tasks                 []*NewTask            `json:"tasks" bson:"tasks"`
-	FacilityHistories     []*NewFacilityHistory `json:"facilityHistories" bson:"facilityHistories"`
-	Name                  string                `json:"name" bson:"name"`
-	Language              string                `json:"language" bson:"language"`
-	EventTypeID           string                `json:"eventTypeId" bson:"eventTypeId"`
-	Mode                  string                `json:"mode" bson:"mode"`
-	Location              string                `json:"location" bson:"location"`
-	Accommodation         string                `json:"accommodation" bson:"accommodation"`
-	RegistrationCloseDate time.Time             `json:"registrationCloseDate" bson:"registrationCloseDate"`
-	StartDate             time.Time             `json:"startDate" bson:"startDate"`
-	EndDate               time.Time             `json:"endDate" bson:"endDate"`
-	MaxParticipants       int                   `json:"maxParticipants" bson:"maxParticipants"`
-	Description           string                `json:"description" bson:"description"`
-	OwnerID               string                `json:"ownerId" bson:"ownerId"`
-	Budget                float64               `json:"budget" bson:"budget"`
-	Image                 string                `json:"image" bson:"image"`
-	IsApproved            bool                  `json:"isApproved" bson:"isApproved"`
-	Reviewer              *string               `json:"reviewer" bson:"reviewer"`
-	IsFinished            bool                  `json:"isFinished" bson:"isFinished"`
-	IsDeleted             bool                  `json:"isDeleted" bson:"isDeleted"`
+	Tags                  []string               `json:"tags" bson:"tags"`
+	Tasks                 []*NewTask             `json:"tasks" bson:"tasks"`
+	FacilityHistories     []*NewFacilityHistory  `json:"facilityHistories" bson:"facilityHistories"`
+	Name                  string                 `json:"name" bson:"name"`
+	Language              string                 `json:"language" bson:"language"`
+	EventTypeID           string                 `json:"eventTypeId" bson:"eventTypeId"`
+	Mode                  string                 `json:"mode" bson:"mode"`
+	Location              string                 `json:"location" bson:"location"`
+	Accommodation         string                 `json:"accommodation" bson:"accommodation"`
+	RegistrationCloseDate time.Time              `json:"registrationCloseDate" bson:"registrationCloseDate"`
+	StartDate             time.Time              `json:"startDate" bson:"startDate"`
+	EndDate               time.Time              `json:"endDate" bson:"endDate"`
+	MaxParticipants       int                    `json:"maxParticipants" bson:"maxParticipants"`
+	Description           string                 `json:"description" bson:"description"`
+	OwnerID               string                 `json:"ownerId" bson:"ownerId"`
+	Budget                float64                `json:"budget" bson:"budget"`
+	Image                 string                 `json:"image" bson:"image"`
+	IsApproved            bool                   `json:"isApproved" bson:"isApproved"`
+	Reviewer              *string                `json:"reviewer" bson:"reviewer"`
+	IsFinished            bool                   `json:"isFinished" bson:"isFinished"`
+	IsDeleted             bool                   `json:"isDeleted" bson:"isDeleted"`
+	CustomizeFields       []*InputCustomizeField `json:"customizeFields" bson:"customizeFields"`
 }
 
 type UpdateEventType struct {

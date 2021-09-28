@@ -62,6 +62,15 @@ func (r *Resolver) mapUser(m *models.User) (*model.User, error) {
 	}, nil
 }
 func (r *Resolver) mapEvent(m *models.Event) (*model.Event, error) {
+	var customizeFields []*model.CustomizeField
+	for _, value := range m.CustomizeFields {
+		customizeFields = append(customizeFields, &model.CustomizeField{
+			Name:     value.Name,
+			Type:     value.Type,
+			Value:    value.Values,
+			Required: value.Required,
+		})
+	}
 	return &model.Event{
 		ID:                    m.ID,
 		CreatedAt:             m.CreatedAt,
@@ -82,6 +91,7 @@ func (r *Resolver) mapEvent(m *models.Event) (*model.Event, error) {
 		Budget:                m.Budget,
 		Image:                 m.Image,
 		IsDeleted:             m.IsDeleted,
+		CustomizeFields:       customizeFields,
 	}, nil
 }
 

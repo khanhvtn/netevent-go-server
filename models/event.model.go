@@ -8,6 +8,13 @@ import (
 
 var CollectionEventName = "events"
 
+type CustomizeField struct {
+	Name     string
+	Type     string
+	Values   []string
+	Required bool
+}
+
 /* Model Type */
 type Event struct {
 	ID                    primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
@@ -34,4 +41,5 @@ type Event struct {
 	Budget                float64              `bson:"budget" json:"budget"`
 	Image                 string               `bson:"image" json:"image"`
 	IsDeleted             bool                 `bson:"isDeleted" json:"isDeleted"`
+	CustomizeFields       []*CustomizeField    `bson:"customizeField" json:"customizeField"`
 }

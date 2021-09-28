@@ -36,6 +36,14 @@ input NewEvent {
 	ownerId:               String!             
 	budget:                Float!           
 	image:                 String!
+	customizeFields:	   [InputCustomizeField]
+}
+
+input InputCustomizeField {
+	name: String!
+	type: String!
+	value: [String!]!
+	required: Boolean!
 }
 input UpdateEvent {       
 	tags:                  [String!]!  
@@ -59,8 +67,8 @@ input UpdateEvent {
 	reviewer:              String
 	isFinished:            Boolean!
 	isDeleted:             Boolean!
+	customizeFields:	   [InputCustomizeField]
 }
-
 
 
 #EventType

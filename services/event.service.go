@@ -80,6 +80,15 @@ func (u *EventService) Create(newEvent model.NewEvent) (*models.Event, error) {
 	if err != nil {
 		return nil, err
 	}
+	customizeFields := make([]*models.CustomizeField, 0)
+	for _, v := range newEvent.CustomizeFields {
+		customizeFields = append(customizeFields, &models.CustomizeField{
+			Name:     v.Name,
+			Type:     v.Type,
+			Values:   v.Value,
+			Required: v.Required,
+		})
+	}
 
 	//convert to bson.M
 	currentTime := time.Now()
@@ -107,6 +116,7 @@ func (u *EventService) Create(newEvent model.NewEvent) (*models.Event, error) {
 		IsDeleted:             false,
 		CreatedAt:             currentTime,
 		UpdatedAt:             currentTime,
+		CustomizeFields:       customizeFields,
 	}
 	//create event
 	createdEvent, err := u.EventRepository.Create(event)
@@ -350,6 +360,16 @@ func (u EventService) UpdateOne(filter bson.M, update model.UpdateEvent) (*model
 		reviewerID = &objectId
 	}
 
+	customizeFields := make([]*models.CustomizeField, 0)
+	for _, v := range update.CustomizeFields {
+		customizeFields = append(customizeFields, &models.CustomizeField{
+			Name:     v.Name,
+			Type:     v.Type,
+			Values:   v.Value,
+			Required: v.Required,
+		})
+	}
+
 	//convert to bson.M
 	currentTime := time.Now()
 	event := models.Event{
@@ -376,6 +396,7 @@ func (u EventService) UpdateOne(filter bson.M, update model.UpdateEvent) (*model
 		IsDeleted:             update.IsDeleted,
 		CreatedAt:             currentEvent.CreatedAt,
 		UpdatedAt:             currentTime,
+		CustomizeFields:       customizeFields,
 	}
 	bsonEvent, err := utilities.InterfaceToBsonM(event)
 	if err != nil {
