@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"context"
 	"fmt"
 	"log"
 
@@ -11,8 +10,7 @@ import (
 
 func InjectContainerMiddleware(container di.Container) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx := context.WithValue(c.Request.Context(), "container", container)
-		c.Request = c.Request.WithContext(ctx)
+		c.Set("container", container)
 		c.Next()
 	}
 }

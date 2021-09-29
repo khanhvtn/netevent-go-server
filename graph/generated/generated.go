@@ -85,6 +85,10 @@ type ComplexityRoot struct {
 		UpdatedAt             func(childComplexity int) int
 	}
 
+	EventStatisticResponse struct {
+		Result func(childComplexity int) int
+	}
+
 	EventType struct {
 		CreatedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
@@ -160,6 +164,7 @@ type ComplexityRoot struct {
 	Query struct {
 		CheckLoginStatus  func(childComplexity int) int
 		Event             func(childComplexity int, id string) int
+		EventStatistic    func(childComplexity int) int
 		EventType         func(childComplexity int, id string) int
 		EventTypes        func(childComplexity int) int
 		Events            func(childComplexity int) int
@@ -246,6 +251,7 @@ type QueryResolver interface {
 	CheckLoginStatus(ctx context.Context) (*model.User, error)
 	Events(ctx context.Context) ([]*model.Event, error)
 	Event(ctx context.Context, id string) (*model.Event, error)
+	EventStatistic(ctx context.Context) (*model.EventStatisticResponse, error)
 	EventTypes(ctx context.Context) ([]*model.EventType, error)
 	EventType(ctx context.Context, id string) (*model.EventType, error)
 	Facilities(ctx context.Context) ([]*model.Facility, error)
@@ -480,6 +486,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Event.UpdatedAt(childComplexity), true
+
+	case "EventStatisticResponse.result":
+		if e.complexity.EventStatisticResponse.Result == nil {
+			break
+		}
+
+		return e.complexity.EventStatisticResponse.Result(childComplexity), true
 
 	case "EventType.createdAt":
 		if e.complexity.EventType.CreatedAt == nil {
@@ -1009,6 +1022,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Event(childComplexity, args["id"].(string)), true
 
+	case "Query.eventStatistic":
+		if e.complexity.Query.EventStatistic == nil {
+			break
+		}
+
+		return e.complexity.Query.EventStatistic(childComplexity), true
+
 	case "Query.eventType":
 		if e.complexity.Query.EventType == nil {
 			break
@@ -1468,6 +1488,7 @@ input UpdateTask  {
   #Event
   events: [Event!]!
   event(id: String!): Event!
+  eventStatistic: EventStatisticResponse!
   #EventType
   eventTypes: [EventType!]!
   eventType(id: String!): EventType!
@@ -1563,6 +1584,10 @@ type Event {
 	image:                 String!           
 	isDeleted:             Boolean!
 	customizeFields:	   [CustomizeField]
+}
+
+type EventStatisticResponse {
+	result: String!
 }
 
 type CustomizeField {
@@ -3197,6 +3222,41 @@ func (ec *executionContext) _Event_customizeFields(ctx context.Context, field gr
 	res := resTmp.([]*model.CustomizeField)
 	fc.Result = res
 	return ec.marshalOCustomizeField2ᚕᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐCustomizeField(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _EventStatisticResponse_result(ctx context.Context, field graphql.CollectedField, obj *model.EventStatisticResponse) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "EventStatisticResponse",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Result, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _EventType_id(ctx context.Context, field graphql.CollectedField, obj *model.EventType) (ret graphql.Marshaler) {
@@ -5535,6 +5595,41 @@ func (ec *executionContext) _Query_event(ctx context.Context, field graphql.Coll
 	res := resTmp.(*model.Event)
 	fc.Result = res
 	return ec.marshalNEvent2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEvent(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_eventStatistic(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().EventStatistic(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.EventStatisticResponse)
+	fc.Result = res
+	return ec.marshalNEventStatisticResponse2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEventStatisticResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_eventTypes(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -8878,6 +8973,33 @@ func (ec *executionContext) _Event(ctx context.Context, sel ast.SelectionSet, ob
 	return out
 }
 
+var eventStatisticResponseImplementors = []string{"EventStatisticResponse"}
+
+func (ec *executionContext) _EventStatisticResponse(ctx context.Context, sel ast.SelectionSet, obj *model.EventStatisticResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, eventStatisticResponseImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("EventStatisticResponse")
+		case "result":
+			out.Values[i] = ec._EventStatisticResponse_result(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var eventTypeImplementors = []string{"EventType"}
 
 func (ec *executionContext) _EventType(ctx context.Context, sel ast.SelectionSet, obj *model.EventType) graphql.Marshaler {
@@ -9384,6 +9506,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_event(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "eventStatistic":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_eventStatistic(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -9990,6 +10126,20 @@ func (ec *executionContext) marshalNEvent2ᚖgithubᚗcomᚋkhanhvtnᚋnetevent�
 		return graphql.Null
 	}
 	return ec._Event(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNEventStatisticResponse2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEventStatisticResponse(ctx context.Context, sel ast.SelectionSet, v model.EventStatisticResponse) graphql.Marshaler {
+	return ec._EventStatisticResponse(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNEventStatisticResponse2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEventStatisticResponse(ctx context.Context, sel ast.SelectionSet, v *model.EventStatisticResponse) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._EventStatisticResponse(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNEventType2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEventType(ctx context.Context, sel ast.SelectionSet, v model.EventType) graphql.Marshaler {

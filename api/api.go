@@ -10,6 +10,7 @@ import (
 	"github.com/khanhvtn/netevent-go/graph"
 	"github.com/khanhvtn/netevent-go/graph/generated"
 	"github.com/khanhvtn/netevent-go/middlewares"
+	"github.com/khanhvtn/netevent-go/routes"
 	"github.com/khanhvtn/netevent-go/services"
 )
 
@@ -46,9 +47,15 @@ func Init(di *services.DI) {
 	//Middlewares
 	app.Use(middlewares.CheckDB())
 	app.Use(middlewares.ContextToContextMiddleware())
+	app.Use(middlewares.InjectContainerMiddleware(di.Container))
+
+	//Routes
+	routes.SetupServerRoutes(app)
 
 	//GraphQL
 	app.POST("/query", graphqlHandler(di))
 	app.GET("/", playgroundHandler())
+
+	//run app
 	app.Run(":5000")
 }

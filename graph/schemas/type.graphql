@@ -36,6 +36,10 @@ type Event {
 	customizeFields:	   [CustomizeField]
 }
 
+type EventStatisticResponse {
+	result: String!
+}
+
 type CustomizeField {
 	name: String!
 	type: String!

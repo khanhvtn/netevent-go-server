@@ -13,6 +13,7 @@ schema {
   #Event
   events: [Event!]!
   event(id: String!): Event!
+  eventStatistic: EventStatisticResponse!
   #EventType
   eventTypes: [EventType!]!
   eventType(id: String!): EventType!

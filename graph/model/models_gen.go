@@ -43,6 +43,10 @@ type Event struct {
 	CustomizeFields       []*CustomizeField  `json:"customizeFields" bson:"customizeFields"`
 }
 
+type EventStatisticResponse struct {
+	Result string `json:"result" bson:"result"`
+}
+
 type EventType struct {
 	ID        primitive.ObjectID `json:"id" bson:"_id"`
 	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`

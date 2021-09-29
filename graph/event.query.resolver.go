@@ -2,7 +2,9 @@ package graph
 
 import (
 	"context"
+	"os"
 
+	"github.com/gin-gonic/gin"
 	"github.com/khanhvtn/netevent-go/graph/model"
 	"github.com/khanhvtn/netevent-go/services"
 	"github.com/khanhvtn/netevent-go/utilities"
@@ -133,4 +135,27 @@ func (r *queryResolver) Event(ctx context.Context, id string) (*model.Event, err
 		return nil, err
 	}
 	return result, nil
+}
+func (r *queryResolver) EventStatistic(ctx context.Context) (*model.EventStatisticResponse, error) {
+	// service := r.di.Container.Get(services.EventServiceName).(*services.EventService)
+
+	//get gin context
+	ginContext := ctx.Value("gincontext").(*gin.Context)
+	ginContext.Header("Content-Disposition", "attachment; filename=event.csv")
+	ginContext.Header("Content-Type", ginContext.ContentType())
+	file, err := os.CreateTemp("", "random")
+	if err != nil {
+		return nil, err
+	}
+
+	defer file.Close()
+	if _, err := file.WriteString("abc"); err != nil {
+		return nil, err
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	ginContext.FileAttachment(file.Name(), "event.csv")
+	return &model.EventStatisticResponse{Result: "success"}, nil
 }
