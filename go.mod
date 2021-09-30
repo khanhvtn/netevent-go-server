@@ -7,8 +7,8 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496 // indirect
 	github.com/gin-gonic/gin v1.7.3
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
-	github.com/gofiber/fiber/v2 v2.19.0 // indirect
 	github.com/joho/godotenv v1.3.0
+	github.com/klauspost/compress v1.13.4 // indirect
 	github.com/sarulabs/di v2.0.0+incompatible
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/vektah/gqlparser/v2 v2.1.0
