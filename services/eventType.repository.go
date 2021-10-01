@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var EventTypeRepositoryName = "EventTypeRepositoryName"
@@ -30,7 +31,7 @@ func (u *EventTypeRepository) createContextAndTargetCol(colName string) (col *mo
 }
 
 /* GetAll: get all data based on condition*/
-func (u *EventTypeRepository) Find(condition bson.M) ([]*models.EventType, error) {
+func (u *EventTypeRepository) Find(condition bson.M, opts *options.FindOptions) ([]*models.EventType, error) {
 	//get a collection , context, cancel func
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionEventTypeName)
 	defer cancel()
@@ -39,7 +40,7 @@ func (u *EventTypeRepository) Find(condition bson.M) ([]*models.EventType, error
 	var eventTypes []*models.EventType = make([]*models.EventType, 0)
 
 	//get all record
-	cur, err := collection.Find(ctx, condition)
+	cur, err := collection.Find(ctx, condition, opts)
 	if err != nil {
 		return nil, err
 	}

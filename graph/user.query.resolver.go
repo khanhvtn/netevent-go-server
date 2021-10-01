@@ -11,9 +11,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
+func (r *queryResolver) Users(ctx context.Context, filter model.UserFilter) ([]*model.User, error) {
 	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
-	users, err := service.GetAll(bson.M{})
+	users, err := service.GetAll(filter)
 	if err != nil {
 		return nil, err
 	}

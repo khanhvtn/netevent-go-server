@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var UserRepositoryName = "UserRepositoryName"
@@ -31,7 +32,7 @@ func (u *UserRepository) createContextAndTargetCol(colName string) (col *mongo.C
 }
 
 /* GetAll: get all data based on condition*/
-func (u *UserRepository) Find(condition bson.M) ([]*models.User, error) {
+func (u *UserRepository) FindAll(condition bson.M, opts *options.FindOptions) ([]*models.User, error) {
 	//get a collection , context, cancel func
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionUserName)
 	defer cancel()
@@ -40,7 +41,7 @@ func (u *UserRepository) Find(condition bson.M) ([]*models.User, error) {
 	var users []*models.User = make([]*models.User, 0)
 
 	//get all user record
-	cur, err := collection.Find(ctx, condition)
+	cur, err := collection.Find(ctx, condition, opts)
 	if err != nil {
 		return nil, err
 	}

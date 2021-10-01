@@ -15,6 +15,17 @@ type CustomizeField struct {
 	Required bool     `json:"required" bson:"required"`
 }
 
+type DefaultFilter struct {
+	Search            *string    `json:"search" bson:"search"`
+	Take              *int       `json:"take" bson:"take"`
+	Page              *int       `json:"page" bson:"page"`
+	IsDeleted         *bool      `json:"isDeleted" bson:"isDeleted"`
+	CreatedAtDateFrom *time.Time `json:"createdAtDateFrom" bson:"createdAtDateFrom"`
+	CreatedAtDateTo   *time.Time `json:"createdAtDateTo" bson:"createdAtDateTo"`
+	UpdatedAtDateFrom *time.Time `json:"updatedAtDateFrom" bson:"updatedAtDateFrom"`
+	UpdatedAtDateTo   *time.Time `json:"updatedAtDateTo" bson:"updatedAtDateTo"`
+}
+
 type Event struct {
 	ID                    primitive.ObjectID `json:"id" bson:"_id"`
 	CreatedAt             time.Time          `json:"createdAt" bson:"createdAt"`
@@ -43,6 +54,20 @@ type Event struct {
 	CustomizeFields       []*CustomizeField  `json:"customizeFields" bson:"customizeFields"`
 }
 
+type EventFilter struct {
+	DefaultFilter             *DefaultFilter `json:"defaultFilter" bson:"defaultFilter"`
+	StartDateFrom             *time.Time     `json:"startDateFrom" bson:"startDateFrom"`
+	StartDateTo               *time.Time     `json:"startDateTo" bson:"startDateTo"`
+	EndDateFrom               *time.Time     `json:"endDateFrom" bson:"endDateFrom"`
+	EndDateTo                 *time.Time     `json:"endDateTo" bson:"endDateTo"`
+	RegistrationCloseDateFrom *time.Time     `json:"registrationCloseDateFrom" bson:"registrationCloseDateFrom"`
+	RegistrationCloseDateTo   *time.Time     `json:"registrationCloseDateTo" bson:"registrationCloseDateTo"`
+	ParticipantMin            *int           `json:"participantMin" bson:"participantMin"`
+	ParticipantMax            *int           `json:"participantMax" bson:"participantMax"`
+	BudgetMin                 *float64       `json:"budgetMin" bson:"budgetMin"`
+	BudgetMax                 *float64       `json:"budgetMax" bson:"budgetMax"`
+}
+
 type EventStatisticResponse struct {
 	Result string `json:"result" bson:"result"`
 }
@@ -55,6 +80,10 @@ type EventType struct {
 	IsDeleted bool               `json:"isDeleted" bson:"isDeleted"`
 }
 
+type EventTypeFilter struct {
+	DefaultFilter *DefaultFilter `json:"defaultFilter" bson:"defaultFilter"`
+}
+
 type Facility struct {
 	ID        primitive.ObjectID `json:"id" bson:"_id"`
 	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
@@ -64,6 +93,11 @@ type Facility struct {
 	Code      string             `json:"code" bson:"code"`
 	Type      string             `json:"type" bson:"type"`
 	IsDeleted bool               `json:"isDeleted" bson:"isDeleted"`
+}
+
+type FacilityFilter struct {
+	DefaultFilter *DefaultFilter `json:"defaultFilter" bson:"defaultFilter"`
+	Status        *bool          `json:"status" bson:"status"`
 }
 
 type FacilityHistory struct {
@@ -266,4 +300,9 @@ type User struct {
 	Roles     []string           `json:"roles" bson:"roles"`
 	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
 	UpdatedAt time.Time          `json:"updatedAt" bson:"updatedAt"`
+}
+
+type UserFilter struct {
+	DefaultFilter *DefaultFilter `json:"defaultFilter" bson:"defaultFilter"`
+	Roles         []*string      `json:"roles" bson:"roles"`
 }

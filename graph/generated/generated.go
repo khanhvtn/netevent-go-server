@@ -164,11 +164,10 @@ type ComplexityRoot struct {
 	Query struct {
 		CheckLoginStatus  func(childComplexity int) int
 		Event             func(childComplexity int, id string) int
-		EventStatistic    func(childComplexity int) int
 		EventType         func(childComplexity int, id string) int
-		EventTypes        func(childComplexity int) int
-		Events            func(childComplexity int) int
-		Facilities        func(childComplexity int) int
+		EventTypes        func(childComplexity int, filter model.EventTypeFilter) int
+		Events            func(childComplexity int, filter model.EventFilter) int
+		Facilities        func(childComplexity int, filter model.FacilityFilter) int
 		Facility          func(childComplexity int, id string) int
 		FacilityHistories func(childComplexity int) int
 		FacilityHistory   func(childComplexity int, id string) int
@@ -177,7 +176,7 @@ type ComplexityRoot struct {
 		Task              func(childComplexity int, id string) int
 		Tasks             func(childComplexity int) int
 		User              func(childComplexity int, id string) int
-		Users             func(childComplexity int) int
+		Users             func(childComplexity int, filter model.UserFilter) int
 	}
 
 	Task struct {
@@ -246,15 +245,14 @@ type ParticipantResolver interface {
 	Event(ctx context.Context, obj *model.Participant) (*model.Event, error)
 }
 type QueryResolver interface {
-	Users(ctx context.Context) ([]*model.User, error)
+	Users(ctx context.Context, filter model.UserFilter) ([]*model.User, error)
 	User(ctx context.Context, id string) (*model.User, error)
 	CheckLoginStatus(ctx context.Context) (*model.User, error)
-	Events(ctx context.Context) ([]*model.Event, error)
+	Events(ctx context.Context, filter model.EventFilter) ([]*model.Event, error)
 	Event(ctx context.Context, id string) (*model.Event, error)
-	EventStatistic(ctx context.Context) (*model.EventStatisticResponse, error)
-	EventTypes(ctx context.Context) ([]*model.EventType, error)
+	EventTypes(ctx context.Context, filter model.EventTypeFilter) ([]*model.EventType, error)
 	EventType(ctx context.Context, id string) (*model.EventType, error)
-	Facilities(ctx context.Context) ([]*model.Facility, error)
+	Facilities(ctx context.Context, filter model.FacilityFilter) ([]*model.Facility, error)
 	Facility(ctx context.Context, id string) (*model.Facility, error)
 	FacilityHistories(ctx context.Context) ([]*model.FacilityHistory, error)
 	FacilityHistory(ctx context.Context, id string) (*model.FacilityHistory, error)
@@ -1022,13 +1020,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Event(childComplexity, args["id"].(string)), true
 
-	case "Query.eventStatistic":
-		if e.complexity.Query.EventStatistic == nil {
-			break
-		}
-
-		return e.complexity.Query.EventStatistic(childComplexity), true
-
 	case "Query.eventType":
 		if e.complexity.Query.EventType == nil {
 			break
@@ -1046,21 +1037,36 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Query.EventTypes(childComplexity), true
+		args, err := ec.field_Query_eventTypes_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.EventTypes(childComplexity, args["filter"].(model.EventTypeFilter)), true
 
 	case "Query.events":
 		if e.complexity.Query.Events == nil {
 			break
 		}
 
-		return e.complexity.Query.Events(childComplexity), true
+		args, err := ec.field_Query_events_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Events(childComplexity, args["filter"].(model.EventFilter)), true
 
 	case "Query.facilities":
 		if e.complexity.Query.Facilities == nil {
 			break
 		}
 
-		return e.complexity.Query.Facilities(childComplexity), true
+		args, err := ec.field_Query_facilities_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Facilities(childComplexity, args["filter"].(model.FacilityFilter)), true
 
 	case "Query.facility":
 		if e.complexity.Query.Facility == nil {
@@ -1148,7 +1154,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Query.Users(childComplexity), true
+		args, err := ec.field_Query_users_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Users(childComplexity, args["filter"].(model.UserFilter)), true
 
 	case "Task.createdAt":
 		if e.complexity.Task.CreatedAt == nil {
@@ -1320,7 +1331,22 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 
 var sources = []*ast.Source{
 	{Name: "graph/schemas/input.graphql", Input: `#Input
+input DefaultFilter {
+	search: String
+	take: Int
+	page: Int
+	isDeleted: Boolean
+	createdAtDateFrom: Time
+	createdAtDateTo: Time
+	updatedAtDateFrom: Time
+	updatedAtDateTo: Time
+}
+
 #User
+input UserFilter {
+	defaultFilter: DefaultFilter!
+	roles: [String]
+}
 input NewUser {
 	email: String!
 	password: String!
@@ -1339,6 +1365,19 @@ input UpdateUser{
 }
 
 #Event
+input EventFilter {
+	defaultFilter: DefaultFilter!
+	startDateFrom: Time
+	startDateTo: Time
+	endDateFrom: Time
+	endDateTo: Time
+	registrationCloseDateFrom: Time 
+	registrationCloseDateTo: Time 
+	participantMin: Int 
+	participantMax: Int 
+	budgetMin: Float
+	budgetMax: Float
+}
 input NewEvent {       
 	tags:                  [String!]!  
 	tasks:                 [NewTask!]!           
@@ -1393,6 +1432,9 @@ input UpdateEvent {
 
 
 #EventType
+input EventTypeFilter {
+	defaultFilter: DefaultFilter!
+}
 input NewEventType  {
 	name: String!
 }
@@ -1402,6 +1444,10 @@ input UpdateEventType  {
 }
 
 #Facility
+input FacilityFilter {
+	defaultFilter: DefaultFilter!
+	status: Boolean
+}
 input NewFacility  {
 	name: String!
 	code: String!
@@ -1482,18 +1528,17 @@ input UpdateTask  {
 #Query
   type Query {
   #User
-	users: [User!]!
+	users(filter: UserFilter!): [User!]!
   user(id: String!): User!
 	checkLoginStatus: User!
   #Event
-  events: [Event!]!
+  events(filter: EventFilter!): [Event!]!
   event(id: String!): Event!
-  eventStatistic: EventStatisticResponse!
   #EventType
-  eventTypes: [EventType!]!
+  eventTypes(filter: EventTypeFilter!): [EventType!]!
   eventType(id: String!): EventType!
   #Facility
-  facilities: [Facility!]!
+  facilities(filter: FacilityFilter!): [Facility!]!
   facility(id: String!): Facility!
   #FacilityHistory
   facilityHistories: [FacilityHistory!]!
@@ -2090,6 +2135,21 @@ func (ec *executionContext) field_Query_eventType_args(ctx context.Context, rawA
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_eventTypes_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.EventTypeFilter
+	if tmp, ok := rawArgs["filter"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("filter"))
+		arg0, err = ec.unmarshalNEventTypeFilter2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEventTypeFilter(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["filter"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_event_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -2102,6 +2162,36 @@ func (ec *executionContext) field_Query_event_args(ctx context.Context, rawArgs 
 		}
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_events_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.EventFilter
+	if tmp, ok := rawArgs["filter"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("filter"))
+		arg0, err = ec.unmarshalNEventFilter2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEventFilter(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["filter"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_facilities_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.FacilityFilter
+	if tmp, ok := rawArgs["filter"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("filter"))
+		arg0, err = ec.unmarshalNFacilityFilter2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐFacilityFilter(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["filter"] = arg0
 	return args, nil
 }
 
@@ -2177,6 +2267,21 @@ func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs m
 		}
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.UserFilter
+	if tmp, ok := rawArgs["filter"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("filter"))
+		arg0, err = ec.unmarshalNUserFilter2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐUserFilter(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["filter"] = arg0
 	return args, nil
 }
 
@@ -5424,9 +5529,16 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_users_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Users(rctx)
+		return ec.resolvers.Query().Users(rctx, args["filter"].(model.UserFilter))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5536,9 +5648,16 @@ func (ec *executionContext) _Query_events(ctx context.Context, field graphql.Col
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_events_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Events(rctx)
+		return ec.resolvers.Query().Events(rctx, args["filter"].(model.EventFilter))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5597,41 +5716,6 @@ func (ec *executionContext) _Query_event(ctx context.Context, field graphql.Coll
 	return ec.marshalNEvent2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEvent(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Query_eventStatistic(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().EventStatistic(rctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.EventStatisticResponse)
-	fc.Result = res
-	return ec.marshalNEventStatisticResponse2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEventStatisticResponse(ctx, field.Selections, res)
-}
-
 func (ec *executionContext) _Query_eventTypes(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -5648,9 +5732,16 @@ func (ec *executionContext) _Query_eventTypes(ctx context.Context, field graphql
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_eventTypes_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().EventTypes(rctx)
+		return ec.resolvers.Query().EventTypes(rctx, args["filter"].(model.EventTypeFilter))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5725,9 +5816,16 @@ func (ec *executionContext) _Query_facilities(ctx context.Context, field graphql
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_facilities_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Facilities(rctx)
+		return ec.resolvers.Query().Facilities(rctx, args["filter"].(model.FacilityFilter))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -7700,6 +7798,230 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputDefaultFilter(ctx context.Context, obj interface{}) (model.DefaultFilter, error) {
+	var it model.DefaultFilter
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "search":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("search"))
+			it.Search, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "take":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("take"))
+			it.Take, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "page":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("page"))
+			it.Page, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "isDeleted":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("isDeleted"))
+			it.IsDeleted, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "createdAtDateFrom":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtDateFrom"))
+			it.CreatedAtDateFrom, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "createdAtDateTo":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtDateTo"))
+			it.CreatedAtDateTo, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "updatedAtDateFrom":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtDateFrom"))
+			it.UpdatedAtDateFrom, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "updatedAtDateTo":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtDateTo"))
+			it.UpdatedAtDateTo, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputEventFilter(ctx context.Context, obj interface{}) (model.EventFilter, error) {
+	var it model.EventFilter
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "defaultFilter":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("defaultFilter"))
+			it.DefaultFilter, err = ec.unmarshalNDefaultFilter2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐDefaultFilter(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "startDateFrom":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("startDateFrom"))
+			it.StartDateFrom, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "startDateTo":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("startDateTo"))
+			it.StartDateTo, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "endDateFrom":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("endDateFrom"))
+			it.EndDateFrom, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "endDateTo":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("endDateTo"))
+			it.EndDateTo, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "registrationCloseDateFrom":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("registrationCloseDateFrom"))
+			it.RegistrationCloseDateFrom, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "registrationCloseDateTo":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("registrationCloseDateTo"))
+			it.RegistrationCloseDateTo, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "participantMin":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("participantMin"))
+			it.ParticipantMin, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "participantMax":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("participantMax"))
+			it.ParticipantMax, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "budgetMin":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("budgetMin"))
+			it.BudgetMin, err = ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "budgetMax":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("budgetMax"))
+			it.BudgetMax, err = ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputEventTypeFilter(ctx context.Context, obj interface{}) (model.EventTypeFilter, error) {
+	var it model.EventTypeFilter
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "defaultFilter":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("defaultFilter"))
+			it.DefaultFilter, err = ec.unmarshalNDefaultFilter2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐDefaultFilter(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputFacilityFilter(ctx context.Context, obj interface{}) (model.FacilityFilter, error) {
+	var it model.FacilityFilter
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "defaultFilter":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("defaultFilter"))
+			it.DefaultFilter, err = ec.unmarshalNDefaultFilter2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐDefaultFilter(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "status":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
+			it.Status, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputInputCustomizeField(ctx context.Context, obj interface{}) (model.InputCustomizeField, error) {
 	var it model.InputCustomizeField
 	var asMap = obj.(map[string]interface{})
@@ -8740,6 +9062,34 @@ func (ec *executionContext) unmarshalInputUpdateUser(ctx context.Context, obj in
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputUserFilter(ctx context.Context, obj interface{}) (model.UserFilter, error) {
+	var it model.UserFilter
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "defaultFilter":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("defaultFilter"))
+			it.DefaultFilter, err = ec.unmarshalNDefaultFilter2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐDefaultFilter(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "roles":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("roles"))
+			it.Roles, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -9511,20 +9861,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}
 				return res
 			})
-		case "eventStatistic":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_eventStatistic(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
 		case "eventTypes":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -10077,6 +10413,11 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) unmarshalNDefaultFilter2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐDefaultFilter(ctx context.Context, v interface{}) (*model.DefaultFilter, error) {
+	res, err := ec.unmarshalInputDefaultFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNEvent2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEvent(ctx context.Context, sel ast.SelectionSet, v model.Event) graphql.Marshaler {
 	return ec._Event(ctx, sel, &v)
 }
@@ -10128,18 +10469,9 @@ func (ec *executionContext) marshalNEvent2ᚖgithubᚗcomᚋkhanhvtnᚋnetevent�
 	return ec._Event(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNEventStatisticResponse2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEventStatisticResponse(ctx context.Context, sel ast.SelectionSet, v model.EventStatisticResponse) graphql.Marshaler {
-	return ec._EventStatisticResponse(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNEventStatisticResponse2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEventStatisticResponse(ctx context.Context, sel ast.SelectionSet, v *model.EventStatisticResponse) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	return ec._EventStatisticResponse(ctx, sel, v)
+func (ec *executionContext) unmarshalNEventFilter2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEventFilter(ctx context.Context, v interface{}) (model.EventFilter, error) {
+	res, err := ec.unmarshalInputEventFilter(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNEventType2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEventType(ctx context.Context, sel ast.SelectionSet, v model.EventType) graphql.Marshaler {
@@ -10193,6 +10525,11 @@ func (ec *executionContext) marshalNEventType2ᚖgithubᚗcomᚋkhanhvtnᚋnetev
 	return ec._EventType(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNEventTypeFilter2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐEventTypeFilter(ctx context.Context, v interface{}) (model.EventTypeFilter, error) {
+	res, err := ec.unmarshalInputEventTypeFilter(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNFacility2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐFacility(ctx context.Context, sel ast.SelectionSet, v model.Facility) graphql.Marshaler {
 	return ec._Facility(ctx, sel, &v)
 }
@@ -10242,6 +10579,11 @@ func (ec *executionContext) marshalNFacility2ᚖgithubᚗcomᚋkhanhvtnᚋneteve
 		return graphql.Null
 	}
 	return ec._Facility(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNFacilityFilter2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐFacilityFilter(ctx context.Context, v interface{}) (model.FacilityFilter, error) {
+	res, err := ec.unmarshalInputFacilityFilter(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNFacilityHistory2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐFacilityHistory(ctx context.Context, sel ast.SelectionSet, v model.FacilityHistory) graphql.Marshaler {
@@ -10680,6 +11022,11 @@ func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋkhanhvtnᚋnetevent�
 	return ec._User(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNUserFilter2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐUserFilter(ctx context.Context, v interface{}) (model.UserFilter, error) {
+	res, err := ec.unmarshalInputUserFilter(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
 	return ec.___Directive(ctx, sel, &v)
 }
@@ -10980,6 +11327,21 @@ func (ec *executionContext) marshalOCustomizeField2ᚖgithubᚗcomᚋkhanhvtnᚋ
 	return ec._CustomizeField(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalOFloat2ᚖfloat64(ctx context.Context, v interface{}) (*float64, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalFloat(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOFloat2ᚖfloat64(ctx context.Context, sel ast.SelectionSet, v *float64) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return graphql.MarshalFloat(*v)
+}
+
 func (ec *executionContext) unmarshalOInputCustomizeField2ᚕᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐInputCustomizeField(ctx context.Context, v interface{}) ([]*model.InputCustomizeField, error) {
 	if v == nil {
 		return nil, nil
@@ -11012,6 +11374,21 @@ func (ec *executionContext) unmarshalOInputCustomizeField2ᚖgithubᚗcomᚋkhan
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalInt(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return graphql.MarshalInt(*v)
+}
+
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -11019,6 +11396,42 @@ func (ec *executionContext) unmarshalOString2string(ctx context.Context, v inter
 
 func (ec *executionContext) marshalOString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
 	return graphql.MarshalString(v)
+}
+
+func (ec *executionContext) unmarshalOString2ᚕᚖstring(ctx context.Context, v interface{}) ([]*string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]*string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalOString2ᚖstring(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOString2ᚕᚖstring(ctx context.Context, sel ast.SelectionSet, v []*string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalOString2ᚖstring(ctx, sel, v[i])
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
@@ -11034,6 +11447,21 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 		return graphql.Null
 	}
 	return graphql.MarshalString(*v)
+}
+
+func (ec *executionContext) unmarshalOTime2ᚖtimeᚐTime(ctx context.Context, v interface{}) (*time.Time, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalTime(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOTime2ᚖtimeᚐTime(ctx context.Context, sel ast.SelectionSet, v *time.Time) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return graphql.MarshalTime(*v)
 }
 
 func (ec *executionContext) marshalOUser2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v *model.User) graphql.Marshaler {

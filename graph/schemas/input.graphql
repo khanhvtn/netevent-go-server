@@ -1,5 +1,20 @@
 #Input
+input DefaultFilter {
+	search: String
+	take: Int
+	page: Int
+	isDeleted: Boolean
+	createdAtDateFrom: Time
+	createdAtDateTo: Time
+	updatedAtDateFrom: Time
+	updatedAtDateTo: Time
+}
+
 #User
+input UserFilter {
+	defaultFilter: DefaultFilter!
+	roles: [String]
+}
 input NewUser {
 	email: String!
 	password: String!
@@ -18,6 +33,19 @@ input UpdateUser{
 }
 
 #Event
+input EventFilter {
+	defaultFilter: DefaultFilter!
+	startDateFrom: Time
+	startDateTo: Time
+	endDateFrom: Time
+	endDateTo: Time
+	registrationCloseDateFrom: Time 
+	registrationCloseDateTo: Time 
+	participantMin: Int 
+	participantMax: Int 
+	budgetMin: Float
+	budgetMax: Float
+}
 input NewEvent {       
 	tags:                  [String!]!  
 	tasks:                 [NewTask!]!           
@@ -72,6 +100,9 @@ input UpdateEvent {
 
 
 #EventType
+input EventTypeFilter {
+	defaultFilter: DefaultFilter!
+}
 input NewEventType  {
 	name: String!
 }
@@ -81,6 +112,10 @@ input UpdateEventType  {
 }
 
 #Facility
+input FacilityFilter {
+	defaultFilter: DefaultFilter!
+	status: Boolean
+}
 input NewFacility  {
 	name: String!
 	code: String!

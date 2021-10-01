@@ -9,15 +9,15 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func (r *queryResolver) Facilities(ctx context.Context) ([]*model.Facility, error) {
+func (r *queryResolver) Facilities(ctx context.Context, filter model.FacilityFilter) ([]*model.Facility, error) {
 	service := r.di.Container.Get(services.FacilityServiceName).(*services.FacilityService)
-	users, err := service.GetAll(bson.M{})
+	facilities, err := service.GetAll(filter)
 	if err != nil {
 		return nil, err
 	}
 	results := make([]*model.Facility, 0)
-	for _, user := range users {
-		mappedFacility, err := r.mapFacility(user)
+	for _, facility := range facilities {
+		mappedFacility, err := r.mapFacility(facility)
 		if err != nil {
 			return nil, err
 		}
@@ -33,12 +33,12 @@ func (r *queryResolver) Facility(ctx context.Context, id string) (*model.Facilit
 	if err != nil {
 		return nil, err
 	}
-	//get user based specific id
-	user, err := service.GetOne(bson.M{"_id": objectId})
+	//get facility based specific id
+	facility, err := service.GetOne(bson.M{"_id": objectId})
 	if err != nil {
 		return nil, err
 	}
-	result, err := r.mapFacility(user)
+	result, err := r.mapFacility(facility)
 	if err != nil {
 		return nil, err
 	}

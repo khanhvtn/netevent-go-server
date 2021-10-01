@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var EventRepositoryName = "EventRepositoryName"
@@ -29,15 +30,16 @@ func (u *EventRepository) createContextAndTargetCol(colName string) (col *mongo.
 }
 
 /* FindAll: get all data based on condition*/
-func (u *EventRepository) FindAll(condition bson.M) ([]*models.Event, error) {
+func (u *EventRepository) FindAll(condition bson.M, opts *options.FindOptions) ([]*models.Event, error) {
 	//get a collection , context, cancel func
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionEventName)
 	defer cancel()
 
 	//create an empty array to store all fields from collection
 	var events []*models.Event = make([]*models.Event, 0)
+
 	//get all record
-	cur, err := collection.Find(ctx, condition)
+	cur, err := collection.Find(ctx, condition, opts)
 	if err != nil {
 		return nil, err
 	}
