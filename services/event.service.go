@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"math"
 	"sync"
 	"time"
 	"unsafe"
@@ -25,7 +26,7 @@ type EventService struct {
 }
 
 /* GetAll: get all data based on condition*/
-func (u *EventService) GetAll(filter model.EventFilter) ([]*models.Event, error) {
+func (u *EventService) GetAll(filter model.EventFilter) ([]*models.Event, *model.PageInfo, error) {
 	//setup filter field
 	finalFilter := bson.M{}
 	filterByString := make([]bson.M, 0)
@@ -111,12 +112,6 @@ func (u *EventService) GetAll(filter model.EventFilter) ([]*models.Event, error)
 		take = *(*int64)(unsafe.Pointer(filter.DefaultFilter.Take))
 	}
 	opts.SetLimit(take)
-	//set paging
-	var page int64 = 1 //target page 1 in default
-	if filter.DefaultFilter.Page != nil {
-		page = *(*int64)(unsafe.Pointer(filter.DefaultFilter.Page))
-	}
-	opts.SetSkip((page - 1) * take)
 
 	//set isDeleted filter
 	var isDeleted = false
@@ -128,7 +123,60 @@ func (u *EventService) GetAll(filter model.EventFilter) ([]*models.Event, error)
 	//set filter for string field
 	finalFilter["$or"] = filterByString
 
-	return u.EventRepository.FindAll(finalFilter, opts)
+	//get total number page
+	errChan := make(chan error, 2)
+	totalPageChan := make(chan int)
+	var totalPage *int = nil
+
+	go func(totalPageChan chan<- int, errChan chan<- error, finalFilter primitive.M, opts *options.FindOptions, take int64) {
+		if events, err := u.EventRepository.FindAll(finalFilter, opts); err != nil {
+			errChan <- err
+			close(totalPageChan)
+		} else {
+			totalEvents := len(events)
+			totalPage := int(math.Ceil(float64(totalEvents) / float64(take)))
+			errChan <- nil
+			totalPageChan <- totalPage
+		}
+
+	}(totalPageChan, errChan, finalFilter, opts, take)
+
+	//set paging
+	var page int64 = 1 //target page 1 in default
+	if filter.DefaultFilter.Page != nil {
+		page = *(*int64)(unsafe.Pointer(filter.DefaultFilter.Page))
+	}
+	opts.SetSkip((page - 1) * take)
+
+	//get events
+	var events []*models.Event = nil
+	eventsChan := make(chan []*models.Event)
+	go func(eventsChan chan<- []*models.Event, errChan chan<- error, finalFilter primitive.M, opts *options.FindOptions) {
+		if events, err := u.EventRepository.FindAll(finalFilter, opts); err != nil {
+			errChan <- err
+			close(eventsChan)
+		} else {
+			errChan <- nil
+			eventsChan <- events
+		}
+
+	}(eventsChan, errChan, finalFilter, opts)
+
+	if totalPageValue, ok := <-totalPageChan; ok {
+		totalPage = &totalPageValue
+	}
+	if eventsValue, ok := <-eventsChan; ok {
+		events = eventsValue
+	}
+
+	close(errChan)
+	for err := range errChan {
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return events, &model.PageInfo{TotalPage: *totalPage, CurrentPage: int(page)}, nil
 }
 
 /*GetOne: get one record from a collection  */

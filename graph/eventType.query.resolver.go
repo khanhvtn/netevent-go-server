@@ -9,9 +9,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func (r *queryResolver) EventTypes(ctx context.Context, filter model.EventTypeFilter) ([]*model.EventType, error) {
+func (r *queryResolver) EventTypes(ctx context.Context, filter model.EventTypeFilter) (*model.EventTypeResponse, error) {
 	service := r.di.Container.Get(services.EventTypeServiceName).(*services.EventTypeService)
-	eventTypes, err := service.GetAll(filter)
+	eventTypes, pageInfo, err := service.GetAll(filter)
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +23,7 @@ func (r *queryResolver) EventTypes(ctx context.Context, filter model.EventTypeFi
 		}
 		results = append(results, mappedEventType)
 	}
-	return results, nil
+	return &model.EventTypeResponse{PageInfo: pageInfo, EventTypes: results}, nil
 }
 func (r *queryResolver) EventType(ctx context.Context, id string) (*model.EventType, error) {
 	service := r.di.Container.Get(services.EventTypeServiceName).(*services.EventTypeService)

@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"math"
 	"unsafe"
 
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -21,7 +22,7 @@ type EventTypeService struct {
 }
 
 /* GetAll: get all data based on condition*/
-func (u *EventTypeService) GetAll(filter model.EventTypeFilter) ([]*models.EventType, error) {
+func (u *EventTypeService) GetAll(filter model.EventTypeFilter) ([]*models.EventType, *model.PageInfo, error) {
 	//setup filter field
 	finalFilter := bson.M{}
 	filterByString := make([]bson.M, 0)
@@ -56,12 +57,6 @@ func (u *EventTypeService) GetAll(filter model.EventTypeFilter) ([]*models.Event
 		take = *(*int64)(unsafe.Pointer(filter.DefaultFilter.Take))
 	}
 	opts.SetLimit(take)
-	//set paging
-	var page int64 = 1 //target page 1 in default
-	if filter.DefaultFilter.Page != nil {
-		page = *(*int64)(unsafe.Pointer(filter.DefaultFilter.Page))
-	}
-	opts.SetSkip((page - 1) * take)
 
 	//set isDeleted filter
 	var isDeleted = false
@@ -73,7 +68,60 @@ func (u *EventTypeService) GetAll(filter model.EventTypeFilter) ([]*models.Event
 	//set filter for string field
 	finalFilter["$or"] = filterByString
 
-	return u.EventTypeRepository.Find(finalFilter, opts)
+	//get total number page
+	errChan := make(chan error, 2)
+	totalPageChan := make(chan int)
+	var totalPage *int = nil
+
+	go func(totalPageChan chan<- int, errChan chan<- error, finalFilter primitive.M, opts *options.FindOptions, take int64) {
+		if eventTypes, err := u.EventTypeRepository.FindAll(finalFilter, opts); err != nil {
+			errChan <- err
+			close(totalPageChan)
+		} else {
+			totalEventTypes := len(eventTypes)
+			totalPage := int(math.Ceil(float64(totalEventTypes) / float64(take)))
+			errChan <- nil
+			totalPageChan <- totalPage
+		}
+
+	}(totalPageChan, errChan, finalFilter, opts, take)
+
+	//set paging
+	var page int64 = 1 //target page 1 in default
+	if filter.DefaultFilter.Page != nil {
+		page = *(*int64)(unsafe.Pointer(filter.DefaultFilter.Page))
+	}
+	opts.SetSkip((page - 1) * take)
+
+	//get eventTypes
+	var eventTypes []*models.EventType = nil
+	eventTypesChan := make(chan []*models.EventType)
+	go func(eventTypesChan chan<- []*models.EventType, errChan chan<- error, finalFilter primitive.M, opts *options.FindOptions) {
+		if eventTypes, err := u.EventTypeRepository.FindAll(finalFilter, opts); err != nil {
+			errChan <- err
+			close(eventTypesChan)
+		} else {
+			errChan <- nil
+			eventTypesChan <- eventTypes
+		}
+
+	}(eventTypesChan, errChan, finalFilter, opts)
+
+	if totalPageValue, ok := <-totalPageChan; ok {
+		totalPage = &totalPageValue
+	}
+	if eventTypesValue, ok := <-eventTypesChan; ok {
+		eventTypes = eventTypesValue
+	}
+
+	close(errChan)
+	for err := range errChan {
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return eventTypes, &model.PageInfo{TotalPage: *totalPage, CurrentPage: int(page)}, nil
 }
 
 /*GetOne: get one record from a collection  */

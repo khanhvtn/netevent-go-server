@@ -1,4 +1,9 @@
 #Model
+type PageInfo {
+	totalPage: Int!
+	currentPage: Int!
+}
+
 type User {
 	id: ID!
 	email: String!
@@ -6,6 +11,11 @@ type User {
 	roles: [String!]!
 	createdAt: Time!
 	updatedAt: Time!
+}
+
+type UserResponse {
+	pageInfo: PageInfo!
+	users: [User!]!
 }
 
 type Event {
@@ -36,8 +46,9 @@ type Event {
 	customizeFields:	   [CustomizeField]
 }
 
-type EventStatisticResponse {
-	result: String!
+type EventResponse {
+	pageInfo: PageInfo!
+	events: [Event!]!
 }
 
 type CustomizeField {
@@ -55,6 +66,10 @@ type EventType  {
 	name: String!
 	isDeleted: Boolean!
 }
+type EventTypeResponse {
+	pageInfo: PageInfo!
+	eventTypes: [EventType!]!
+}
 
 
 type Facility  {
@@ -66,6 +81,11 @@ type Facility  {
 	code: String!
 	type: String!
 	isDeleted: Boolean!
+}
+
+type FacilityResponse {
+	pageInfo: PageInfo!
+	facilities: [Facility!]!
 }
 
 type FacilityHistory  {

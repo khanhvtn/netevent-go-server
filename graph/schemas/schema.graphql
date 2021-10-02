@@ -7,17 +7,17 @@ schema {
 #Query
   type Query {
   #User
-	users(filter: UserFilter!): [User!]!
+	users(filter: UserFilter!): UserResponse!
   user(id: String!): User!
 	checkLoginStatus: User!
   #Event
-  events(filter: EventFilter!): [Event!]!
+  events(filter: EventFilter!): EventResponse!
   event(id: String!): Event!
   #EventType
-  eventTypes(filter: EventTypeFilter!): [EventType!]!
+  eventTypes(filter: EventTypeFilter!): EventTypeResponse!
   eventType(id: String!): EventType!
   #Facility
-  facilities(filter: FacilityFilter!): [Facility!]!
+  facilities(filter: FacilityFilter!): FacilityResponse!
   facility(id: String!): Facility!
   #FacilityHistory
   facilityHistories: [FacilityHistory!]!

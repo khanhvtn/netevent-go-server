@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"math"
 	"unsafe"
 
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -21,7 +22,7 @@ type FacilityService struct {
 }
 
 /* GetAll: get all data based on condition*/
-func (u *FacilityService) GetAll(filter model.FacilityFilter) ([]*models.Facility, error) {
+func (u *FacilityService) GetAll(filter model.FacilityFilter) ([]*models.Facility, *model.PageInfo, error) {
 	//setup filter field
 	finalFilter := bson.M{}
 	filterByString := make([]bson.M, 0)
@@ -70,12 +71,6 @@ func (u *FacilityService) GetAll(filter model.FacilityFilter) ([]*models.Facilit
 		take = *(*int64)(unsafe.Pointer(filter.DefaultFilter.Take))
 	}
 	opts.SetLimit(take)
-	//set paging
-	var page int64 = 1 //target page 1 in default
-	if filter.DefaultFilter.Page != nil {
-		page = *(*int64)(unsafe.Pointer(filter.DefaultFilter.Page))
-	}
-	opts.SetSkip((page - 1) * take)
 
 	//set isDeleted filter
 	var isDeleted = false
@@ -87,7 +82,60 @@ func (u *FacilityService) GetAll(filter model.FacilityFilter) ([]*models.Facilit
 	//set filter for string field
 	finalFilter["$or"] = filterByString
 
-	return u.FacilityRepository.FindAll(finalFilter, opts)
+	//get total number page
+	errChan := make(chan error, 2)
+	totalPageChan := make(chan int)
+	var totalPage *int = nil
+
+	go func(totalPageChan chan<- int, errChan chan<- error, finalFilter primitive.M, opts *options.FindOptions, take int64) {
+		if facilities, err := u.FacilityRepository.FindAll(finalFilter, opts); err != nil {
+			errChan <- err
+			close(totalPageChan)
+		} else {
+			totalFacilities := len(facilities)
+			totalPage := int(math.Ceil(float64(totalFacilities) / float64(take)))
+			errChan <- nil
+			totalPageChan <- totalPage
+		}
+
+	}(totalPageChan, errChan, finalFilter, opts, take)
+
+	//set paging
+	var page int64 = 1 //target page 1 in default
+	if filter.DefaultFilter.Page != nil {
+		page = *(*int64)(unsafe.Pointer(filter.DefaultFilter.Page))
+	}
+	opts.SetSkip((page - 1) * take)
+
+	//get facilities
+	var facilities []*models.Facility = nil
+	facilitiesChan := make(chan []*models.Facility)
+	go func(facilitiesChan chan<- []*models.Facility, errChan chan<- error, finalFilter primitive.M, opts *options.FindOptions) {
+		if facilities, err := u.FacilityRepository.FindAll(finalFilter, opts); err != nil {
+			errChan <- err
+			close(facilitiesChan)
+		} else {
+			errChan <- nil
+			facilitiesChan <- facilities
+		}
+
+	}(facilitiesChan, errChan, finalFilter, opts)
+
+	if totalPageValue, ok := <-totalPageChan; ok {
+		totalPage = &totalPageValue
+	}
+	if facilitiesValue, ok := <-facilitiesChan; ok {
+		facilities = facilitiesValue
+	}
+
+	close(errChan)
+	for err := range errChan {
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return facilities, &model.PageInfo{TotalPage: *totalPage, CurrentPage: int(page)}, nil
 }
 
 /*GetOne: get one record from a collection  */

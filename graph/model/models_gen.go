@@ -68,8 +68,9 @@ type EventFilter struct {
 	BudgetMax                 *float64       `json:"budgetMax" bson:"budgetMax"`
 }
 
-type EventStatisticResponse struct {
-	Result string `json:"result" bson:"result"`
+type EventResponse struct {
+	PageInfo *PageInfo `json:"pageInfo" bson:"pageInfo"`
+	Events   []*Event  `json:"events" bson:"events"`
 }
 
 type EventType struct {
@@ -82,6 +83,11 @@ type EventType struct {
 
 type EventTypeFilter struct {
 	DefaultFilter *DefaultFilter `json:"defaultFilter" bson:"defaultFilter"`
+}
+
+type EventTypeResponse struct {
+	PageInfo   *PageInfo    `json:"pageInfo" bson:"pageInfo"`
+	EventTypes []*EventType `json:"eventTypes" bson:"eventTypes"`
 }
 
 type Facility struct {
@@ -108,6 +114,11 @@ type FacilityHistory struct {
 	BorrowDate time.Time          `json:"borrowDate" bson:"borrowDate"`
 	ReturnDate time.Time          `json:"returnDate" bson:"returnDate"`
 	Event      *Event             `json:"event" bson:"event"`
+}
+
+type FacilityResponse struct {
+	PageInfo   *PageInfo   `json:"pageInfo" bson:"pageInfo"`
+	Facilities []*Facility `json:"facilities" bson:"facilities"`
 }
 
 type InputCustomizeField struct {
@@ -188,6 +199,11 @@ type NewUser struct {
 	Password        string   `json:"password" bson:"password"`
 	ConfirmPassword string   `json:"confirmPassword" bson:"confirmPassword"`
 	Roles           []string `json:"roles" bson:"roles"`
+}
+
+type PageInfo struct {
+	TotalPage   int `json:"totalPage" bson:"totalPage"`
+	CurrentPage int `json:"currentPage" bson:"currentPage"`
 }
 
 type Participant struct {
@@ -305,4 +321,9 @@ type User struct {
 type UserFilter struct {
 	DefaultFilter *DefaultFilter `json:"defaultFilter" bson:"defaultFilter"`
 	Roles         []*string      `json:"roles" bson:"roles"`
+}
+
+type UserResponse struct {
+	PageInfo *PageInfo `json:"pageInfo" bson:"pageInfo"`
+	Users    []*User   `json:"users" bson:"users"`
 }

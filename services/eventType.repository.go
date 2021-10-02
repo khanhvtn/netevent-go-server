@@ -31,7 +31,7 @@ func (u *EventTypeRepository) createContextAndTargetCol(colName string) (col *mo
 }
 
 /* GetAll: get all data based on condition*/
-func (u *EventTypeRepository) Find(condition bson.M, opts *options.FindOptions) ([]*models.EventType, error) {
+func (u *EventTypeRepository) FindAll(condition bson.M, opts *options.FindOptions) ([]*models.EventType, error) {
 	//get a collection , context, cancel func
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionEventTypeName)
 	defer cancel()

@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"math"
 	"unsafe"
 
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -22,7 +23,7 @@ type UserService struct {
 }
 
 /* GetAll: get all data based on condition*/
-func (u *UserService) GetAll(filter model.UserFilter) ([]*models.User, error) {
+func (u *UserService) GetAll(filter model.UserFilter) ([]*models.User, *model.PageInfo, error) {
 	//setup filter field
 	finalFilter := bson.M{}
 	filterByString := make([]bson.M, 0)
@@ -65,6 +66,28 @@ func (u *UserService) GetAll(filter model.UserFilter) ([]*models.User, error) {
 		take = *(*int64)(unsafe.Pointer(filter.DefaultFilter.Take))
 	}
 	opts.SetLimit(take)
+
+	//set filter for string field
+	finalFilter["$or"] = filterByString
+
+	//get total number page
+	errChan := make(chan error, 2)
+	totalPageChan := make(chan int)
+	var totalPage *int = nil
+
+	go func(totalPageChan chan<- int, errChan chan<- error, finalFilter primitive.M, opts *options.FindOptions, take int64) {
+		if users, err := u.UserRepository.FindAll(finalFilter, opts); err != nil {
+			errChan <- err
+			close(totalPageChan)
+		} else {
+			totalUsers := len(users)
+			totalPage := int(math.Ceil(float64(totalUsers) / float64(take)))
+			errChan <- nil
+			totalPageChan <- totalPage
+		}
+
+	}(totalPageChan, errChan, finalFilter, opts, take)
+
 	//set paging
 	var page int64 = 1 //target page 1 in default
 	if filter.DefaultFilter.Page != nil {
@@ -72,10 +95,35 @@ func (u *UserService) GetAll(filter model.UserFilter) ([]*models.User, error) {
 	}
 	opts.SetSkip((page - 1) * take)
 
-	//set filter for string field
-	finalFilter["$or"] = filterByString
+	//get users
+	var users []*models.User = nil
+	usersChan := make(chan []*models.User)
+	go func(usersChan chan<- []*models.User, errChan chan<- error, finalFilter primitive.M, opts *options.FindOptions) {
+		if users, err := u.UserRepository.FindAll(finalFilter, opts); err != nil {
+			errChan <- err
+			close(usersChan)
+		} else {
+			errChan <- nil
+			usersChan <- users
+		}
 
-	return u.UserRepository.FindAll(finalFilter, opts)
+	}(usersChan, errChan, finalFilter, opts)
+
+	if totalPageValue, ok := <-totalPageChan; ok {
+		totalPage = &totalPageValue
+	}
+	if usersValue, ok := <-usersChan; ok {
+		users = usersValue
+	}
+
+	close(errChan)
+	for err := range errChan {
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return users, &model.PageInfo{TotalPage: *totalPage, CurrentPage: int(page)}, nil
 }
 
 /*GetOne: get one record from a collection  */

@@ -9,9 +9,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func (r *queryResolver) Facilities(ctx context.Context, filter model.FacilityFilter) ([]*model.Facility, error) {
+func (r *queryResolver) Facilities(ctx context.Context, filter model.FacilityFilter) (*model.FacilityResponse, error) {
 	service := r.di.Container.Get(services.FacilityServiceName).(*services.FacilityService)
-	facilities, err := service.GetAll(filter)
+	facilities, pageInfo, err := service.GetAll(filter)
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +23,7 @@ func (r *queryResolver) Facilities(ctx context.Context, filter model.FacilityFil
 		}
 		results = append(results, mappedFacility)
 	}
-	return results, nil
+	return &model.FacilityResponse{PageInfo: pageInfo, Facilities: results}, nil
 }
 
 func (r *queryResolver) Facility(ctx context.Context, id string) (*model.Facility, error) {

@@ -99,9 +99,9 @@ func (r *eventResolver) Reviewer(ctx context.Context, obj *model.Event) (*model.
 	return results, nil
 }
 
-func (r *queryResolver) Events(ctx context.Context, filter model.EventFilter) ([]*model.Event, error) {
+func (r *queryResolver) Events(ctx context.Context, filter model.EventFilter) (*model.EventResponse, error) {
 	service := r.di.Container.Get(services.EventServiceName).(*services.EventService)
-	events, err := service.GetAll(filter)
+	events, pageInfo, err := service.GetAll(filter)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (r *queryResolver) Events(ctx context.Context, filter model.EventFilter) ([
 		}
 		results = append(results, mappedEvent)
 	}
-	return results, nil
+	return &model.EventResponse{PageInfo: pageInfo, Events: results}, nil
 }
 
 func (r *queryResolver) Event(ctx context.Context, id string) (*model.Event, error) {
