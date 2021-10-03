@@ -2,6 +2,8 @@ package services
 
 import (
 	"errors"
+	"math"
+	"unsafe"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
@@ -9,6 +11,8 @@ import (
 	"github.com/khanhvtn/netevent-go/models"
 	"github.com/khanhvtn/netevent-go/utilities"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var UserServiceName = "UserServiceName"
@@ -19,8 +23,107 @@ type UserService struct {
 }
 
 /* GetAll: get all data based on condition*/
-func (u *UserService) GetAll(condition bson.M) ([]*models.User, error) {
-	return u.UserRepository.Find(condition)
+func (u *UserService) GetAll(filter model.UserFilter) ([]*models.User, *model.PageInfo, error) {
+	//setup filter field
+	finalFilter := bson.M{}
+	filterByString := make([]bson.M, 0)
+	opts := options.Find()
+
+	//set filter name
+	var keySearch string = ""
+	if filter.DefaultFilter.Search != nil {
+		keySearch = *filter.DefaultFilter.Search
+	}
+	filterByString = append(filterByString, bson.M{
+		"email": bson.M{"$regex": primitive.Regex{Pattern: keySearch, Options: "i"}},
+	})
+
+	//set roles filter
+	if filter.Roles != nil {
+		finalFilter["roles"] = bson.M{
+			"$all": filter.Roles,
+		}
+	}
+
+	//for updatedAt
+	if filter.DefaultFilter.UpdatedAtDateFrom != nil && filter.DefaultFilter.UpdatedAtDateTo != nil {
+		finalFilter["updatedAt"] = bson.M{
+			"$gte": filter.DefaultFilter.UpdatedAtDateFrom,
+			"$lte": filter.DefaultFilter.UpdatedAtDateTo,
+		}
+	}
+	//for createdAt
+	if filter.DefaultFilter.CreatedAtDateFrom != nil && filter.DefaultFilter.CreatedAtDateTo != nil {
+		finalFilter["createdAt"] = bson.M{
+			"$gte": filter.DefaultFilter.CreatedAtDateFrom,
+			"$lte": filter.DefaultFilter.CreatedAtDateTo,
+		}
+	}
+
+	//set the number of record that will display
+	var take int64 = 10 //take 10 records in default
+	if filter.DefaultFilter.Take != nil {
+		take = *(*int64)(unsafe.Pointer(filter.DefaultFilter.Take))
+	}
+	opts.SetLimit(take)
+
+	//set filter for string field
+	finalFilter["$or"] = filterByString
+
+	//get total number page
+	errChan := make(chan error, 2)
+	totalPageChan := make(chan int)
+	var totalPage *int = nil
+
+	go func(totalPageChan chan<- int, errChan chan<- error, finalFilter primitive.M, opts *options.FindOptions, take int64) {
+		if users, err := u.UserRepository.FindAll(finalFilter, opts); err != nil {
+			errChan <- err
+			close(totalPageChan)
+		} else {
+			totalUsers := len(users)
+			totalPage := int(math.Ceil(float64(totalUsers) / float64(take)))
+			errChan <- nil
+			totalPageChan <- totalPage
+		}
+
+	}(totalPageChan, errChan, finalFilter, opts, take)
+
+	//set paging
+	var page int64 = 1 //target page 1 in default
+	if filter.DefaultFilter.Page != nil {
+		page = *(*int64)(unsafe.Pointer(filter.DefaultFilter.Page))
+	}
+	opts.SetSkip((page - 1) * take)
+
+	//get users
+	var users []*models.User = nil
+	usersChan := make(chan []*models.User)
+	go func(usersChan chan<- []*models.User, errChan chan<- error, finalFilter primitive.M, opts *options.FindOptions) {
+		if users, err := u.UserRepository.FindAll(finalFilter, opts); err != nil {
+			errChan <- err
+			close(usersChan)
+		} else {
+			errChan <- nil
+			usersChan <- users
+		}
+
+	}(usersChan, errChan, finalFilter, opts)
+
+	if totalPageValue, ok := <-totalPageChan; ok {
+		totalPage = &totalPageValue
+	}
+	if usersValue, ok := <-usersChan; ok {
+		users = usersValue
+	}
+
+	close(errChan)
+	for err := range errChan {
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return users, &model.PageInfo{TotalPage: *totalPage, CurrentPage: int(page)}, nil
 }
 
 /*GetOne: get one record from a collection  */

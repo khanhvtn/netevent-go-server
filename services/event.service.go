@@ -2,8 +2,10 @@ package services
 
 import (
 	"errors"
+	"math"
 	"sync"
 	"time"
+	"unsafe"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/khanhvtn/netevent-go/graph/model"
@@ -12,6 +14,7 @@ import (
 	"github.com/khanhvtn/netevent-go/utilities"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var EventServiceName = "EventServiceName"
@@ -23,8 +26,157 @@ type EventService struct {
 }
 
 /* GetAll: get all data based on condition*/
-func (u *EventService) GetAll(condition bson.M) ([]*models.Event, error) {
-	return u.EventRepository.FindAll(condition)
+func (u *EventService) GetAll(filter model.EventFilter) ([]*models.Event, *model.PageInfo, error) {
+	//setup filter field
+	finalFilter := bson.M{}
+	filterByString := make([]bson.M, 0)
+	opts := options.Find()
+
+	//set filter name
+	var keySearch string = ""
+	if filter.DefaultFilter.Search != nil {
+		keySearch = *filter.DefaultFilter.Search
+	}
+	filterByString = append(filterByString, bson.M{
+		"name": bson.M{"$regex": primitive.Regex{Pattern: keySearch, Options: "i"}},
+	})
+	filterByString = append(filterByString, bson.M{
+		"language": bson.M{"$regex": primitive.Regex{Pattern: keySearch, Options: "i"}},
+	})
+	filterByString = append(filterByString, bson.M{
+		"location": bson.M{"$regex": primitive.Regex{Pattern: keySearch, Options: "i"}},
+	})
+	filterByString = append(filterByString, bson.M{
+		"description": bson.M{"$regex": primitive.Regex{Pattern: keySearch, Options: "i"}},
+	})
+	filterByString = append(filterByString, bson.M{
+		"mode": bson.M{"$regex": primitive.Regex{Pattern: keySearch, Options: "i"}},
+	})
+	filterByString = append(filterByString, bson.M{
+		"accommodation": bson.M{"$regex": primitive.Regex{Pattern: keySearch, Options: "i"}},
+	})
+	//set date filter
+	//for startDate
+	if filter.StartDateFrom != nil && filter.StartDateTo != nil {
+		finalFilter["startDate"] = bson.M{
+			"$gte": filter.StartDateFrom,
+			"$lte": filter.StartDateTo,
+		}
+	}
+	//for endDate
+	if filter.EndDateFrom != nil && filter.EndDateTo != nil {
+		finalFilter["endDate"] = bson.M{
+			"$gte": filter.EndDateFrom,
+			"$lte": filter.EndDateTo,
+		}
+	}
+	//for registrationCloseDate
+	if filter.RegistrationCloseDateFrom != nil && filter.RegistrationCloseDateTo != nil {
+		finalFilter["registrationCloseDate"] = bson.M{
+			"$gte": filter.RegistrationCloseDateFrom,
+			"$lte": filter.RegistrationCloseDateTo,
+		}
+	}
+	//for updatedAt
+	if filter.DefaultFilter.UpdatedAtDateFrom != nil && filter.DefaultFilter.UpdatedAtDateTo != nil {
+		finalFilter["updatedAt"] = bson.M{
+			"$gte": filter.DefaultFilter.UpdatedAtDateFrom,
+			"$lte": filter.DefaultFilter.UpdatedAtDateTo,
+		}
+	}
+	//for createdAt
+	if filter.DefaultFilter.CreatedAtDateFrom != nil && filter.DefaultFilter.CreatedAtDateTo != nil {
+		finalFilter["createdAt"] = bson.M{
+			"$gte": filter.DefaultFilter.CreatedAtDateFrom,
+			"$lte": filter.DefaultFilter.CreatedAtDateTo,
+		}
+	}
+	//set filter for number of participants
+	if filter.ParticipantMax != nil && filter.ParticipantMin != nil {
+		finalFilter["maxParticipants"] = bson.M{
+			"$gte": filter.ParticipantMin,
+			"$lte": filter.ParticipantMax,
+		}
+	}
+	//set filter for budget
+	if filter.BudgetMax != nil && filter.BudgetMin != nil {
+		finalFilter["budget"] = bson.M{
+			"$gte": filter.BudgetMin,
+			"$lte": filter.BudgetMax,
+		}
+	}
+
+	//set the number of record that will display
+	var take int64 = 10 //take 10 records in default
+	if filter.DefaultFilter.Take != nil {
+		take = *(*int64)(unsafe.Pointer(filter.DefaultFilter.Take))
+	}
+	opts.SetLimit(take)
+
+	//set isDeleted filter
+	var isDeleted = false
+	if filter.DefaultFilter.IsDeleted != nil {
+		isDeleted = *filter.DefaultFilter.IsDeleted
+	}
+	finalFilter["isDeleted"] = isDeleted
+
+	//set filter for string field
+	finalFilter["$or"] = filterByString
+
+	//get total number page
+	errChan := make(chan error, 2)
+	totalPageChan := make(chan int)
+	var totalPage *int = nil
+
+	go func(totalPageChan chan<- int, errChan chan<- error, finalFilter primitive.M, opts *options.FindOptions, take int64) {
+		if events, err := u.EventRepository.FindAll(finalFilter, opts); err != nil {
+			errChan <- err
+			close(totalPageChan)
+		} else {
+			totalEvents := len(events)
+			totalPage := int(math.Ceil(float64(totalEvents) / float64(take)))
+			errChan <- nil
+			totalPageChan <- totalPage
+		}
+
+	}(totalPageChan, errChan, finalFilter, opts, take)
+
+	//set paging
+	var page int64 = 1 //target page 1 in default
+	if filter.DefaultFilter.Page != nil {
+		page = *(*int64)(unsafe.Pointer(filter.DefaultFilter.Page))
+	}
+	opts.SetSkip((page - 1) * take)
+
+	//get events
+	var events []*models.Event = nil
+	eventsChan := make(chan []*models.Event)
+	go func(eventsChan chan<- []*models.Event, errChan chan<- error, finalFilter primitive.M, opts *options.FindOptions) {
+		if events, err := u.EventRepository.FindAll(finalFilter, opts); err != nil {
+			errChan <- err
+			close(eventsChan)
+		} else {
+			errChan <- nil
+			eventsChan <- events
+		}
+
+	}(eventsChan, errChan, finalFilter, opts)
+
+	if totalPageValue, ok := <-totalPageChan; ok {
+		totalPage = &totalPageValue
+	}
+	if eventsValue, ok := <-eventsChan; ok {
+		events = eventsValue
+	}
+
+	close(errChan)
+	for err := range errChan {
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return events, &model.PageInfo{TotalPage: *totalPage, CurrentPage: int(page)}, nil
 }
 
 /*GetOne: get one record from a collection  */

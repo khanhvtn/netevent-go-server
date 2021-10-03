@@ -11,9 +11,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
+func (r *queryResolver) Users(ctx context.Context, filter model.UserFilter) (*model.UserResponse, error) {
 	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
-	users, err := service.GetAll(bson.M{})
+	users, pageInfo, err := service.GetAll(filter)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +25,7 @@ func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
 		}
 		results = append(results, mappedUser)
 	}
-	return results, nil
+	return &model.UserResponse{PageInfo: pageInfo, Users: results}, nil
 }
 
 func (r *queryResolver) CheckLoginStatus(ctx context.Context) (*model.User, error) {
