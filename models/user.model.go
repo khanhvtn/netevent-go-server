@@ -17,4 +17,5 @@ type User struct {
 	Password    string             `bson:"password,omitempty" json:"password"`
 	Roles       []string           `bson:"roles" json:"roles"`
 	IsActivated bool               `bson:"isActivated" json:"isActivated"`
+	ExpiredAt   time.Time          `bson:"expiredAt,omitempty" json:"expiredAt"`
 }

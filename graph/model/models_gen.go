@@ -321,6 +321,7 @@ type User struct {
 	IsActivated bool               `json:"isActivated" bson:"isActivated"`
 	CreatedAt   time.Time          `json:"createdAt" bson:"createdAt"`
 	UpdatedAt   time.Time          `json:"updatedAt" bson:"updatedAt"`
+	ExpiredAt   *time.Time         `json:"expiredAt" bson:"expiredAt"`
 }
 
 type UserFilter struct {

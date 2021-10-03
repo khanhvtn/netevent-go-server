@@ -12,6 +12,7 @@ type User {
 	isActivated: Boolean!
 	createdAt: Time!
 	updatedAt: Time!
+	expiredAt: Time
 }
 
 type UserResponse {

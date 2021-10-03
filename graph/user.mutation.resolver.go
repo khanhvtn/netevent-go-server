@@ -46,21 +46,12 @@ func (r *mutationResolver) ActivateUser(ctx context.Context, input model.Activat
 	if err != nil {
 		return nil, err
 	}
-	//find user
-	targetUser, err := service.GetOne(bson.M{"_id": objectId})
-	if err != nil {
-		return nil, err
-	}
-	//update password
-	targetUser.Password = input.Password
-	targetUser.IsActivated = true
-
-	//convert struct to bson
-	bsonTargetUser, err := utilities.InterfaceToBsonM(targetUser)
-	if err != nil {
-		return nil, err
-	}
-	activatedUser, err := service.UpdateOne(bson.M{"_id": targetUser.ID}, bsonTargetUser)
+	activatedUser, err := service.ActivateAccount(*objectId,
+		bson.M{
+			"password":    input.Password,
+			"isActivated": true,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}

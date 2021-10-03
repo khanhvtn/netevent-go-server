@@ -13,7 +13,9 @@ import (
 	"github.com/khanhvtn/netevent-go/utilities"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/x/bsonx"
 )
 
 var UserServiceName = "UserServiceName"
@@ -134,6 +136,17 @@ func (u *UserService) GetOne(filter bson.M) (*models.User, error) {
 
 /*Create: create a new record to a collection*/
 func (u *UserService) Create(newUser model.NewUser) (*models.User, error) {
+	//get a collection , context, cancel func
+	collection, ctx, cancel := u.UserRepository.createContextAndTargetCol(models.CollectionUserName)
+	defer cancel()
+	indexModel := mongo.IndexModel{
+		Keys:    bsonx.Doc{{Key: "expiredAt", Value: bsonx.Int32(1)}},
+		Options: options.Index().SetExpireAfterSeconds(0),
+	}
+	_, err := collection.Indexes().CreateOne(ctx, indexModel)
+	if err != nil {
+		return nil, err
+	}
 	return u.UserRepository.Create(newUser)
 }
 
@@ -145,6 +158,16 @@ func (u UserService) UpdateOne(filter bson.M, update bson.M) (*models.User, erro
 //DeleteOne func is to update one record from a collection
 func (u UserService) DeleteOne(filter bson.M) (*models.User, error) {
 	return u.UserRepository.DeleteOne(filter)
+}
+
+//ActivateAccount func is to activate user account
+func (u UserService) ActivateAccount(objectId primitive.ObjectID, update bson.M) (*models.User, error) {
+	return u.UserRepository.UpdateOne(bson.M{"_id": objectId}, bson.M{
+		"$set": update,
+		"$unset": bson.M{
+			"expiredAt": "",
+		},
+	})
 }
 
 func (u UserService) Login(input model.Login) (*models.User, error) {
