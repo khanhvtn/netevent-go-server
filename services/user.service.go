@@ -8,6 +8,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
 	"github.com/khanhvtn/netevent-go/graph/model"
+	"github.com/khanhvtn/netevent-go/helpers"
 	"github.com/khanhvtn/netevent-go/models"
 	"github.com/khanhvtn/netevent-go/utilities"
 	"go.mongodb.org/mongo-driver/bson"
@@ -166,7 +167,7 @@ func (u *UserService) ValidateNewUser(newUser model.NewUser) error {
 	return validation.ValidateStruct(&newUser,
 		validation.Field(&newUser.Email, validation.Required.Error("email must not be blanked"), is.Email.Error("invalid email"), validation.By(func(email interface{}) error {
 			user, err := u.GetOne(bson.M{"email": email.(string)})
-			if err != nil {
+			if _, ok := err.(*helpers.ErrNotFound); err != nil && !ok {
 				return err
 			}
 			if user != nil {
@@ -175,9 +176,13 @@ func (u *UserService) ValidateNewUser(newUser model.NewUser) error {
 			return nil
 
 		})),
-		validation.Field(&newUser.Password, validation.Required.Error("password must not be blanked")),
-		validation.Field(&newUser.ConfirmPassword, validation.Required.Error("confirm password must not be blanked"), validation.In(newUser.Password).Error("confirm password must be identical with Password")),
 		validation.Field(&newUser.Roles, validation.Required.Error("Role must not be blanked")),
+	)
+}
+func (u *UserService) ValidateActivateUser(activateUser model.ActivateUser) error {
+	return validation.ValidateStruct(&activateUser,
+		validation.Field(&activateUser.Password, validation.Required.Error("password must not be blanked")),
+		validation.Field(&activateUser.ConfirmPassword, validation.Required.Error("confirm password must not be blanked"), validation.In(activateUser.Password).Error("confirm password must be identical with Password")),
 	)
 }
 
@@ -211,7 +216,7 @@ func (u *UserService) ValidateLogin(login model.Login) error {
 	)
 }
 
-func (u *UserService) HashPassword(newUser *model.NewUser) error {
+func (u *UserService) HashPassword(newUser *model.ActivateUser) error {
 	hashPassword, err := utilities.HashPassword(newUser.Password)
 	if err != nil {
 		return err

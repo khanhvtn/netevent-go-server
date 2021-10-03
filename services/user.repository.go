@@ -89,11 +89,11 @@ func (u *UserRepository) Create(newUser model.NewUser) (*models.User, error) {
 	//convert newUser to bson.M
 	currentTime := time.Now()
 	user := models.User{
-		Email:     newUser.Email,
-		Password:  newUser.Password,
-		Roles:     newUser.Roles,
-		CreatedAt: currentTime,
-		UpdatedAt: currentTime,
+		Email:       newUser.Email,
+		Roles:       newUser.Roles,
+		CreatedAt:   currentTime,
+		UpdatedAt:   currentTime,
+		IsActivated: false,
 	}
 	newData, err := utilities.InterfaceToBsonM(user)
 	if err != nil {

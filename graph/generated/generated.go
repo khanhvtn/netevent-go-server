@@ -130,6 +130,7 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
+		ActivateUser          func(childComplexity int, input model.ActivateUser) int
 		CreateEvent           func(childComplexity int, input model.NewEvent) int
 		CreateEventType       func(childComplexity int, input model.NewEventType) int
 		CreateFacility        func(childComplexity int, input model.NewFacility) int
@@ -208,12 +209,13 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
-		CreatedAt func(childComplexity int) int
-		Email     func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Password  func(childComplexity int) int
-		Roles     func(childComplexity int) int
-		UpdatedAt func(childComplexity int) int
+		CreatedAt   func(childComplexity int) int
+		Email       func(childComplexity int) int
+		ID          func(childComplexity int) int
+		IsActivated func(childComplexity int) int
+		Password    func(childComplexity int) int
+		Roles       func(childComplexity int) int
+		UpdatedAt   func(childComplexity int) int
 	}
 
 	UserResponse struct {
@@ -243,6 +245,7 @@ type MutationResolver interface {
 	DeleteUser(ctx context.Context, id string) (*model.User, error)
 	Login(ctx context.Context, input model.Login) (*model.User, error)
 	Logout(ctx context.Context) (string, error)
+	ActivateUser(ctx context.Context, input model.ActivateUser) (*model.User, error)
 	CreateEvent(ctx context.Context, input model.NewEvent) (*model.Event, error)
 	UpdateEvent(ctx context.Context, id string, input model.UpdateEvent) (*model.Event, error)
 	DeleteEvent(ctx context.Context, id string) (*model.Event, error)
@@ -687,6 +690,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.FacilityResponse.PageInfo(childComplexity), true
+
+	case "Mutation.activateUser":
+		if e.complexity.Mutation.ActivateUser == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_activateUser_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ActivateUser(childComplexity, args["input"].(model.ActivateUser)), true
 
 	case "Mutation.createEvent":
 		if e.complexity.Mutation.CreateEvent == nil {
@@ -1315,6 +1330,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.ID(childComplexity), true
 
+	case "User.isActivated":
+		if e.complexity.User.IsActivated == nil {
+			break
+		}
+
+		return e.complexity.User.IsActivated(childComplexity), true
+
 	case "User.password":
 		if e.complexity.User.Password == nil {
 			break
@@ -1433,8 +1455,6 @@ input UserFilter {
 }
 input NewUser {
 	email: String!
-	password: String!
-	confirmPassword: String!
 	roles: [String!]!
 }
 
@@ -1446,6 +1466,12 @@ input UpdateUser{
 	email: String!
 	password: String!
 	roles: [String!]!
+}
+
+input ActivateUser{
+	userId: String!
+	password: String!
+	confirmPassword: String!
 }
 
 #Event
@@ -1644,6 +1670,7 @@ input UpdateTask  {
   deleteUser(id: String!): User!
 	login(input: Login!): User!
   logout: String!
+  activateUser(input: ActivateUser!): User!
   
   #Event
   createEvent(input: NewEvent!): Event!
@@ -1688,6 +1715,7 @@ type User {
 	email: String!
 	password: String!
 	roles: [String!]!
+	isActivated: Boolean!
 	createdAt: Time!
 	updatedAt: Time!
 }
@@ -1815,6 +1843,21 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) field_Mutation_activateUser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.ActivateUser
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNActivateUser2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐActivateUser(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_Mutation_createEventType_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -4546,6 +4589,48 @@ func (ec *executionContext) _Mutation_logout(ctx context.Context, field graphql.
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_activateUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_activateUser_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().ActivateUser(rctx, args["input"].(model.ActivateUser))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Mutation_createEvent(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -6990,6 +7075,41 @@ func (ec *executionContext) _User_roles(ctx context.Context, field graphql.Colle
 	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _User_isActivated(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IsActivated, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _User_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -8217,6 +8337,42 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputActivateUser(ctx context.Context, obj interface{}) (model.ActivateUser, error) {
+	var it model.ActivateUser
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "userId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
+			it.UserID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "password":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
+			it.Password, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "confirmPassword":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("confirmPassword"))
+			it.ConfirmPassword, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputDefaultFilter(ctx context.Context, obj interface{}) (model.DefaultFilter, error) {
 	var it model.DefaultFilter
 	var asMap = obj.(map[string]interface{})
@@ -8940,22 +9096,6 @@ func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj inter
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
 			it.Email, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "password":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
-			it.Password, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "confirmPassword":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("confirmPassword"))
-			it.ConfirmPassword, err = ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -10062,6 +10202,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "activateUser":
+			out.Values[i] = ec._Mutation_activateUser(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createEvent":
 			out.Values[i] = ec._Mutation_createEvent(ctx, field)
 			if out.Values[i] == graphql.Null {
@@ -10652,6 +10797,11 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "isActivated":
+			out.Values[i] = ec._User_isActivated(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createdAt":
 			out.Values[i] = ec._User_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -10949,6 +11099,11 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 // endregion **************************** object.gotpl ****************************
 
 // region    ***************************** type.gotpl *****************************
+
+func (ec *executionContext) unmarshalNActivateUser2githubᚗcomᚋkhanhvtnᚋneteventᚑgoᚋgraphᚋmodelᚐActivateUser(ctx context.Context, v interface{}) (model.ActivateUser, error) {
+	res, err := ec.unmarshalInputActivateUser(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
 
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)

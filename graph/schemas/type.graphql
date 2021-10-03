@@ -9,6 +9,7 @@ type User {
 	email: String!
 	password: String!
 	roles: [String!]!
+	isActivated: Boolean!
 	createdAt: Time!
 	updatedAt: Time!
 }

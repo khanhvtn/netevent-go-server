@@ -8,6 +8,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type ActivateUser struct {
+	UserID          string `json:"userId" bson:"userId"`
+	Password        string `json:"password" bson:"password"`
+	ConfirmPassword string `json:"confirmPassword" bson:"confirmPassword"`
+}
+
 type CustomizeField struct {
 	Name     string   `json:"name" bson:"name"`
 	Type     string   `json:"type" bson:"type"`
@@ -195,10 +201,8 @@ type NewTask struct {
 }
 
 type NewUser struct {
-	Email           string   `json:"email" bson:"email"`
-	Password        string   `json:"password" bson:"password"`
-	ConfirmPassword string   `json:"confirmPassword" bson:"confirmPassword"`
-	Roles           []string `json:"roles" bson:"roles"`
+	Email string   `json:"email" bson:"email"`
+	Roles []string `json:"roles" bson:"roles"`
 }
 
 type PageInfo struct {
@@ -310,12 +314,13 @@ type UpdateUser struct {
 }
 
 type User struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id"`
-	Email     string             `json:"email" bson:"email"`
-	Password  string             `json:"password" bson:"password"`
-	Roles     []string           `json:"roles" bson:"roles"`
-	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
-	UpdatedAt time.Time          `json:"updatedAt" bson:"updatedAt"`
+	ID          primitive.ObjectID `json:"id" bson:"_id"`
+	Email       string             `json:"email" bson:"email"`
+	Password    string             `json:"password" bson:"password"`
+	Roles       []string           `json:"roles" bson:"roles"`
+	IsActivated bool               `json:"isActivated" bson:"isActivated"`
+	CreatedAt   time.Time          `json:"createdAt" bson:"createdAt"`
+	UpdatedAt   time.Time          `json:"updatedAt" bson:"updatedAt"`
 }
 
 type UserFilter struct {

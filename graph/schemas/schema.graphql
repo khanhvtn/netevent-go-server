@@ -39,6 +39,7 @@ schema {
   deleteUser(id: String!): User!
 	login(input: Login!): User!
   logout: String!
+  activateUser(input: ActivateUser!): User!
   
   #Event
   createEvent(input: NewEvent!): Event!

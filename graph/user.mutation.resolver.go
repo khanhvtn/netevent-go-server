@@ -16,15 +16,55 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 	if err := service.ValidateNewUser(input); err != nil {
 		return nil, err
 	}
-	//hash password
-	if err := service.HashPassword(&input); err != nil {
-		return nil, err
-	}
 	newUser, err := service.Create(input)
 	if err != nil {
 		return nil, err
 	}
+	//send activate account mail
+	if err := utilities.SendActivateAccountMail(newUser); err != nil {
+		return nil, err
+	}
 	results, err := r.mapUser(newUser)
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+func (r *mutationResolver) ActivateUser(ctx context.Context, input model.ActivateUser) (*model.User, error) {
+	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
+	//check input
+	if err := service.ValidateActivateUser(input); err != nil {
+		return nil, err
+	}
+	//hash password
+	if err := service.HashPassword(&input); err != nil {
+		return nil, err
+	}
+
+	//convert userID to objectId
+	objectId, err := utilities.ConvertStringIdToObjectID(input.UserID)
+	if err != nil {
+		return nil, err
+	}
+	//find user
+	targetUser, err := service.GetOne(bson.M{"_id": objectId})
+	if err != nil {
+		return nil, err
+	}
+	//update password
+	targetUser.Password = input.Password
+	targetUser.IsActivated = true
+
+	//convert struct to bson
+	bsonTargetUser, err := utilities.InterfaceToBsonM(targetUser)
+	if err != nil {
+		return nil, err
+	}
+	activatedUser, err := service.UpdateOne(bson.M{"_id": targetUser.ID}, bsonTargetUser)
+	if err != nil {
+		return nil, err
+	}
+	results, err := r.mapUser(activatedUser)
 	if err != nil {
 		return nil, err
 	}
