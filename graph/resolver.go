@@ -1,10 +1,15 @@
 package graph
 
 import (
+	"context"
+	"errors"
+
+	"github.com/gin-gonic/gin"
 	"github.com/khanhvtn/netevent-go/graph/generated"
 	"github.com/khanhvtn/netevent-go/graph/model"
 	"github.com/khanhvtn/netevent-go/models"
 	"github.com/khanhvtn/netevent-go/services"
+	"github.com/khanhvtn/netevent-go/utilities"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -203,4 +208,28 @@ func (r *Resolver) mapTask(m *models.Task) (*model.Task, error) {
 		Event:     graphModelEvent,
 		User:      graphModelUser,
 	}, nil
+}
+
+func (r *Resolver) GetUserFromContext(ctx context.Context, service *services.UserService) (*models.User, error) {
+	//get gin context
+	ginContext := ctx.Value("gincontext").(*gin.Context)
+	encryptedCookie, err := ginContext.Cookie("netevent")
+	if err != nil {
+		return nil, errors.New("access denied")
+	}
+	//decrypt cookie
+	id, err := utilities.Decrypted([]byte(encryptedCookie))
+	if err != nil {
+		return nil, err
+	}
+	objectId, err := utilities.ConvertStringIdToObjectID(string(id))
+	if err != nil {
+		return nil, err
+	}
+	//get user based specific id
+	user, err := service.GetOne(bson.M{"_id": objectId})
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }

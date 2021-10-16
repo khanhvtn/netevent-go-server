@@ -2,9 +2,7 @@ package graph
 
 import (
 	"context"
-	"errors"
 
-	"github.com/gin-gonic/gin"
 	"github.com/khanhvtn/netevent-go/graph/model"
 	"github.com/khanhvtn/netevent-go/services"
 	"github.com/khanhvtn/netevent-go/utilities"
@@ -30,23 +28,8 @@ func (r *queryResolver) Users(ctx context.Context, filter model.UserFilter) (*mo
 
 func (r *queryResolver) CheckLoginStatus(ctx context.Context) (*model.User, error) {
 	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
-	//get gin context
-	ginContext := ctx.Value("gincontext").(*gin.Context)
-	encryptedCookie, err := ginContext.Cookie("netevent")
-	if err != nil {
-		return nil, errors.New("access denied")
-	}
-	//decrypt cookie
-	id, err := utilities.Decrypted([]byte(encryptedCookie))
-	if err != nil {
-		return nil, err
-	}
-	objectId, err := utilities.ConvertStringIdToObjectID(string(id))
-	if err != nil {
-		return nil, err
-	}
 	//get user based specific id
-	user, err := service.GetOne(bson.M{"_id": objectId})
+	user, err := r.GetUserFromContext(ctx, service)
 	if err != nil {
 		return nil, err
 	}
