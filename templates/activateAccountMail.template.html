@@ -1,0 +1,17 @@
+<!-- template.html -->
+<!DOCTYPE html>
+<html>
+<body>
+    <div style="width:100%;padding: 20px; text-align: center;">
+        <h2>Congratulation {{.Email}}, you registered successfully</h2>
+        <h3 style="margin-bottom: 30px;">Please activate your account to access to the system. This link will be expired in 1 day</h3>
+        <a 
+        target="_blank"
+        rel="noreferrer" 
+        href="{{.ActivatedLink}}"
+        style="text-align: center;background-color: green;border-radius: 3%;padding: 15px;text-decoration: none;color: white; font-weight: 700;"
+        >Activate</a>
+    </div>
+    
+</body>
+</html>

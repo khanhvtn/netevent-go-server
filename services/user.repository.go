@@ -89,11 +89,12 @@ func (u *UserRepository) Create(newUser model.NewUser) (*models.User, error) {
 	//convert newUser to bson.M
 	currentTime := time.Now()
 	user := models.User{
-		Email:     newUser.Email,
-		Password:  newUser.Password,
-		Roles:     newUser.Roles,
-		CreatedAt: currentTime,
-		UpdatedAt: currentTime,
+		Email:       newUser.Email,
+		Roles:       newUser.Roles,
+		CreatedAt:   currentTime,
+		UpdatedAt:   currentTime,
+		IsActivated: false,
+		ExpiredAt:   time.Now().Add(time.Hour * 24),
 	}
 	newData, err := utilities.InterfaceToBsonM(user)
 	if err != nil {
@@ -120,8 +121,7 @@ func (u UserRepository) UpdateOne(filter bson.M, update bson.M) (*models.User, e
 	collection, ctx, cancel := u.createContextAndTargetCol(models.CollectionUserName)
 	defer cancel()
 	//update user information
-	newUpdate := bson.M{"$set": update}
-	updateResult, err := collection.UpdateOne(ctx, filter, newUpdate)
+	updateResult, err := collection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return nil, err
 	}

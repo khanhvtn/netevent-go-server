@@ -58,3 +58,31 @@ func SendMail(eventName, participantId, eventId string, listReceiver []*models.P
 	}
 	return nil
 }
+
+/* Send email from project email to others */
+func SendActivateAccountMail(newUser *models.User) error {
+	dir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	sender := models.NewSender()
+	//send email to all receivers
+	m := models.NewMail()
+	m.To = append(m.To, newUser.Email)
+	m.Subject = "Activate Account"
+	t, err := template.ParseFiles(dir + "/templates/activateAccountMail.template.html")
+	if err != nil {
+		return err
+	}
+	m.MailTemplate = &models.MailTemplate{Template: t, Data: struct {
+		Email         string
+		ActivatedLink string
+	}{
+		ActivatedLink: fmt.Sprintf("https://net-event.herokuapp.com/activate/%s", newUser.ID.Hex()),
+		Email:         newUser.Email,
+	}}
+	if err := sender.Send(m); err != nil {
+		return err
+	}
+	return nil
+}

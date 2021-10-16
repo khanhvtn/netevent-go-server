@@ -17,8 +17,6 @@ input UserFilter {
 }
 input NewUser {
 	email: String!
-	password: String!
-	confirmPassword: String!
 	roles: [String!]!
 }
 
@@ -30,6 +28,12 @@ input UpdateUser{
 	email: String!
 	password: String!
 	roles: [String!]!
+}
+
+input ActivateUser{
+	userId: String!
+	password: String!
+	confirmPassword: String!
 }
 
 #Event
