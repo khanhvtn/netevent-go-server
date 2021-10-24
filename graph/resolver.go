@@ -12,6 +12,7 @@ import (
 	"github.com/khanhvtn/netevent-go/models"
 	"github.com/khanhvtn/netevent-go/services"
 	"github.com/khanhvtn/netevent-go/utilities"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -313,8 +314,14 @@ func (r *Resolver) extractErrs(err error, ctx context.Context) error {
 		return err
 	}
 
-	for _, v := range errs {
-		graphql.AddErrorf(ctx, v)
+	for k, v := range errs {
+		graphql.AddError(ctx, &gqlerror.Error{
+			Path:    graphql.GetPath(ctx),
+			Message: v,
+			Extensions: map[string]interface{}{
+				"key": k,
+			},
+		})
 	}
 	return nil
 }

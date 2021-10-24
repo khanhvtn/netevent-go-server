@@ -148,6 +148,6 @@ func (r *mutationResolver) Login(ctx context.Context, input model.Login) (*model
 func (r *mutationResolver) Logout(ctx context.Context) (string, error) {
 	//set token
 	ginContext := ctx.Value("gincontext").(*gin.Context)
-	ginContext.SetCookie("netevent", "", 0, "/", "localhost", false, true)
+	ginContext.SetCookie("netevent", "", -1, "/", "localhost", false, true)
 	return "Logout successful", nil
 }
