@@ -15,7 +15,10 @@ func (r *mutationResolver) CreateParticipant(ctx context.Context, input model.Ne
 	eventService := r.di.Container.Get(services.EventServiceName).(*services.EventService)
 	//check input
 	if err := participantService.ValidateNewParticipant(input); err != nil {
-		return nil, err
+		if err := r.extractErrs(err, ctx); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 	newParticipant, err := participantService.Create(input)
 	if err != nil {
@@ -41,7 +44,10 @@ func (r *mutationResolver) UpdateParticipant(ctx context.Context, id string, inp
 	service := r.di.Container.Get(services.ParticipantServiceName).(*services.ParticipantService)
 	//check input
 	if err := service.ValidateUpdateParticipant(id, input); err != nil {
-		return nil, err
+		if err := r.extractErrs(err, ctx); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 	//convert string id to object id
 	objectId, err := utilities.ConvertStringIdToObjectID(id)

@@ -29,7 +29,7 @@ func (r *queryResolver) Users(ctx context.Context, filter model.UserFilter) (*mo
 func (r *queryResolver) CheckLoginStatus(ctx context.Context) (*model.User, error) {
 	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
 	//get user based specific id
-	user, err := r.GetUserFromContext(ctx, service)
+	user, err := r.getUserFromContext(ctx, service)
 	if err != nil {
 		return nil, err
 	}

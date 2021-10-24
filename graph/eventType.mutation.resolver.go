@@ -13,7 +13,10 @@ func (r *mutationResolver) CreateEventType(ctx context.Context, input model.NewE
 	service := r.di.Container.Get(services.EventTypeServiceName).(*services.EventTypeService)
 	//check input
 	if err := service.ValidateNewEventType(input); err != nil {
-		return nil, err
+		if err := r.extractErrs(err, ctx); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 	newEventType, err := service.Create(input)
 	if err != nil {
@@ -30,7 +33,10 @@ func (r *mutationResolver) UpdateEventType(ctx context.Context, id string, input
 	service := r.di.Container.Get(services.EventTypeServiceName).(*services.EventTypeService)
 	//check input
 	if err := service.ValidateUpdateEventType(id, input); err != nil {
-		return nil, err
+		if err := r.extractErrs(err, ctx); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 	//convert string id to object id
 	objectId, err := utilities.ConvertStringIdToObjectID(id)

@@ -14,7 +14,10 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
 	//check input
 	if err := service.ValidateNewUser(input); err != nil {
-		return nil, err
+		if err := r.extractErrs(err, ctx); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 	newUser, err := service.Create(input)
 	if err != nil {
@@ -34,7 +37,10 @@ func (r *mutationResolver) ActivateUser(ctx context.Context, input model.Activat
 	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
 	//check input
 	if err := service.ValidateActivateUser(input); err != nil {
-		return nil, err
+		if err := r.extractErrs(err, ctx); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 	//hash password
 	if err := service.HashPassword(&input); err != nil {
@@ -65,7 +71,10 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, id string, input mode
 	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
 	//check input
 	if err := service.ValidateUpdateUser(id, input); err != nil {
-		return nil, err
+		if err := r.extractErrs(err, ctx); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 	//hash password
 	if err := service.HashPasswordUpdateUser(&input); err != nil {
@@ -112,7 +121,10 @@ func (r *mutationResolver) Login(ctx context.Context, input model.Login) (*model
 	service := r.di.Container.Get(services.UserServiceName).(*services.UserService)
 	//check input
 	if err := service.ValidateLogin(input); err != nil {
-		return nil, err
+		if err := r.extractErrs(err, ctx); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 	user, err := service.Login(input)
 	if err != nil {

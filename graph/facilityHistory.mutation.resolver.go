@@ -13,7 +13,10 @@ func (r *mutationResolver) CreateFacilityHistory(ctx context.Context, input mode
 	service := r.di.Container.Get(services.FacilityHistoryServiceName).(*services.FacilityHistoryService)
 	//check input
 	if err := service.ValidateNewFacilityHistory(input); err != nil {
-		return nil, err
+		if err := r.extractErrs(err, ctx); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 	newFacilityHistory, err := service.Create(input)
 	if err != nil {
@@ -29,7 +32,10 @@ func (r *mutationResolver) UpdateFacilityHistory(ctx context.Context, id string,
 	service := r.di.Container.Get(services.FacilityHistoryServiceName).(*services.FacilityHistoryService)
 	//check input
 	if err := service.ValidateUpdateFacilityHistory(id, input); err != nil {
-		return nil, err
+		if err := r.extractErrs(err, ctx); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 	//convert string id to object id
 	objectId, err := utilities.ConvertStringIdToObjectID(id)

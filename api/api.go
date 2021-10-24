@@ -5,6 +5,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/khanhvtn/netevent-go/graph"
@@ -48,6 +49,12 @@ func Init(di *services.DI) {
 	app.Use(middlewares.CheckDB())
 	app.Use(middlewares.ContextToContextMiddleware())
 	app.Use(middlewares.InjectContainerMiddleware(di.Container))
+
+	//add cors
+	config := cors.DefaultConfig()
+	config.AllowOrigins = []string{"http://localhost:3000"}
+	config.AllowCredentials = true
+	app.Use(cors.New(config))
 
 	//Routes
 	routes.SetupServerRoutes(app)

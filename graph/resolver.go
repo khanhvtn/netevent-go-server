@@ -2,8 +2,10 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/gin-gonic/gin"
 	"github.com/khanhvtn/netevent-go/graph/generated"
 	"github.com/khanhvtn/netevent-go/graph/model"
@@ -210,7 +212,7 @@ func (r *Resolver) mapTask(m *models.Task) (*model.Task, error) {
 	}, nil
 }
 
-func (r *Resolver) GetUserFromContext(ctx context.Context, service *services.UserService) (*models.User, error) {
+func (r *Resolver) getUserFromContext(ctx context.Context, service *services.UserService) (*models.User, error) {
 	//get gin context
 	ginContext := ctx.Value("gincontext").(*gin.Context)
 	encryptedCookie, err := ginContext.Cookie("netevent")
@@ -232,4 +234,87 @@ func (r *Resolver) GetUserFromContext(ctx context.Context, service *services.Use
 		return nil, err
 	}
 	return user, nil
+}
+
+func (r *Resolver) checkPermissionUser(user *models.User) error {
+	//Allow Admin
+	validRoles := []string{"1", "3"}
+	for _, validRole := range validRoles {
+		if ok := utilities.Contains(validRole, user.Roles); ok {
+			return nil
+		}
+	}
+	return errors.New("access deny")
+}
+func (r *Resolver) checkPermissionEvent(user *models.User) error {
+	//Allow Creator, Reviewer
+	validRoles := []string{"2", "3"}
+	for _, validRole := range validRoles {
+		if ok := utilities.Contains(validRole, user.Roles); ok {
+			return nil
+		}
+	}
+	return errors.New("access deny")
+}
+func (r *Resolver) checkPermissionEventType(user *models.User) error {
+	//Allow Creator
+	validRoles := []string{"3"}
+	for _, validRole := range validRoles {
+		if ok := utilities.Contains(validRole, user.Roles); ok {
+			return nil
+		}
+	}
+	return errors.New("access deny")
+}
+func (r *Resolver) checkPermissionFacility(user *models.User) error {
+	//Allow Admin, Creator
+	validRoles := []string{"1", "3"}
+	for _, validRole := range validRoles {
+		if ok := utilities.Contains(validRole, user.Roles); ok {
+			return nil
+		}
+	}
+	return errors.New("access deny")
+}
+func (r *Resolver) checkPermissionFacilityHistory(user *models.User) error {
+	//Allow Creator
+	validRoles := []string{"3"}
+	for _, validRole := range validRoles {
+		if ok := utilities.Contains(validRole, user.Roles); ok {
+			return nil
+		}
+	}
+	return errors.New("access deny")
+}
+func (r *Resolver) checkPermissionTask(user *models.User) error {
+	//Allow Member, Creator
+	validRoles := []string{"3", "4"}
+	for _, validRole := range validRoles {
+		if ok := utilities.Contains(validRole, user.Roles); ok {
+			return nil
+		}
+	}
+	return errors.New("access deny")
+}
+func (r *Resolver) checkPermissionParticipant(user *models.User) error {
+	//Allow Member, Reviewer
+	validRoles := []string{"2", "4"}
+	for _, validRole := range validRoles {
+		if ok := utilities.Contains(validRole, user.Roles); ok {
+			return nil
+		}
+	}
+	return errors.New("access deny")
+}
+func (r *Resolver) extractErrs(err error, ctx context.Context) error {
+	b, _ := json.Marshal(err)
+	errs := make(map[string]string)
+	if err := json.Unmarshal(b, &errs); err != nil {
+		return err
+	}
+
+	for _, v := range errs {
+		graphql.AddErrorf(ctx, v)
+	}
+	return nil
 }

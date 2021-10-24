@@ -13,7 +13,10 @@ func (r *mutationResolver) CreateFacility(ctx context.Context, input model.NewFa
 	service := r.di.Container.Get(services.FacilityServiceName).(*services.FacilityService)
 	//check input
 	if err := service.ValidateNewFacility(input); err != nil {
-		return nil, err
+		if err := r.extractErrs(err, ctx); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 	newFacility, err := service.Create(input)
 	if err != nil {
@@ -29,7 +32,10 @@ func (r *mutationResolver) UpdateFacility(ctx context.Context, id string, input 
 	service := r.di.Container.Get(services.FacilityServiceName).(*services.FacilityService)
 	//check input
 	if err := service.ValidateUpdateFacility(id, input); err != nil {
-		return nil, err
+		if err := r.extractErrs(err, ctx); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 	//cast UpdateFacility to bson.M type
 	newUpdate, err := utilities.InterfaceToBsonM(input)
